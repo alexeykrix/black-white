@@ -1,8 +1,10 @@
 body,
 html, 
-canvas {
+canvas,
+div {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
   overflow: hidden;
 }
 
@@ -10,4 +12,21 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 100vh;
+}
+html {
+  height: 100vh;
+}
+
+#starSvg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 30px;
+  transition: all 1s ease, opacity 0s;
+  opacity: 0;
+}
+
+#starSvg.white #starPath {
+  fill: white
 }

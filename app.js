@@ -6,34 +6,100 @@ const screen = {
   h: 720,
 }
 
+let color = 'black'
+
+let lvl = 0
+
+const lvls = [
+  {
+    blocks: {
+      black: [
+        { x: 126, y: 0, w: 480, h: 276 },
+        { x: 760, y: 0, w: 480, h: 276 },
+      ],
+      white: []
+    },
+    player: {
+      startX: 256,
+      startY: 276,
+    },
+    star: {
+      x: 1180,
+      y: 335,
+    }
+  },
+  {
+    blocks: {
+      black: [
+        { x: 0, y: 150, w: 1280, h: 20 },
+        { x: 640, y: 150, w: 20, h: 500 },
+      ],
+      white: [
+        { x: 0, y: 10, w: 1280, h: 100 },
+      ]
+    },
+    player: {
+      startX: 270,
+      startY: 170,
+    },
+    star: {
+      x: 1100,
+      y: 220,
+    }
+  },
+  {
+    blocks: {
+      black: [
+        { x: 650, y: 556, w: 1280, h: 20 },
+        { x: 650, y: 256, w: 1280, h: 20 },
+        { x: 20, y: 0, w: 100, h: 20 },        
+        { x: 640, y: 108, w: 10, h: 800 },
+        { x: 500, y: 0, w: 1000, h: 20 },
+      ],
+      white: [
+        { x: 650, y: 404, w: 1280, h: 20 },        
+        { x: 650, y: 108, w: 1280, h: 20 },
+        { x: 250, y: 0, w: 100, h: 20 },
+        { x: 650, y: 108, w: 10, h: 800 },
+      ]
+    },
+    player: {
+      startX: 668,
+      startY: 584,
+    },
+    star: {
+      x: 50,
+      y: 80,
+    }
+  }
+]
+
 const player = {
-  // sprite: {
-  //   black: new Image(35, 70),
-  //   white: new Image(35, 70),
-  // },
   sprite: new Image(),
   w: 35,
   h: 70,
-  x: 270,
-  y: 370,
+  x: lvls[lvl].player.startX,
+  y: lvls[lvl].player.startY,
 }
 
-let color = 'black'
-
-const blocks = {
-  black: [
-    { x: 0, y: 150, w: 1280, h: 20 },
-    { x: 640, y: 150, w: 20, h: 500 },
-  ],
-  white: [
-    { x: 0, y: 10, w: 1280, h: 100 },
-  ]
+const star = {
+  sprite: {
+    black: new Image(),
+    white: new Image(),
+  },
+  w: 35,
+  h: 35,
 }
+
+star.sprite['black'].src = './star.svg'
+star.sprite['white'].src = './star-white.svg'
 
 player.sprite.src = './player-all.png'
 
 canvas.width = screen.w
 canvas.height = screen.h 
+
+const starSvg = document.querySelector('#starSvg')
 
 document.body.appendChild(canvas)
 
@@ -45,8 +111,6 @@ let inJump = false
 let inFall = false
 let jumpCount = 0
 let jumpHeight = 200
-let jumpDirection = 'up'
-
 
 const checkCollision = (obj1,obj2) => {
   var XColl=false;
@@ -59,11 +123,49 @@ const checkCollision = (obj1,obj2) => {
   return false;
 }
 
+const changeLvl = () => {
+  player.x = 0
+  player.y = 100000 
+
+  starSvg.style.opacity = 1
+  setTimeout(() => {
+    starSvg.style.left = window.innerWidth /2 +'px'
+    starSvg.style.bottom = window.innerHeight /2 +'px'
+    starSvg.style.transform = 'scale(100)'
+    setTimeout(() => {
+      if (lvl +1 === lvls.length) lvl = 0
+      else lvl++
+      player.x = lvls[lvl].player.startX
+      player.y = lvls[lvl].player.startY
+    }, 800);
+    setTimeout(() => {
+      if (player.y === 100000) {
+        if (lvl +1 === lvls.length) lvl = 0
+        else lvl++
+        player.x = lvls[lvl].player.startX
+        player.y = lvls[lvl].player.startY
+      }
+
+      let cordX = lvls[lvl].star.x / (screen.w / window.innerWidth)
+      let cordY = lvls[lvl].star.y / (screen.h / window.innerHeight)
+
+      starSvg.style.left = cordX
+      starSvg.style.bottom = cordY
+      starSvg.style.transform = ''
+      setTimeout(() => {
+        starSvg.style.opacity = 0
+        fall()
+      }, 900);
+    }, 1000);
+  }, 10);
+
+}
+
 const jump = () => {
   player.y += 4
   jumpCount += 4
   let crossing = false
-  blocks[color].forEach(block => {
+  lvls[lvl].blocks[color].forEach(block => {
     let result = checkCollision(block, player)
     if (result) crossing = result
   })
@@ -78,7 +180,7 @@ const jump = () => {
 
 const fall = () => {
   let crossing = false
-  blocks[color].forEach(block => {
+  lvls[lvl].blocks[color].forEach(block => {
     let result = checkCollision(block, player)
     if (result) crossing = result
   })
@@ -86,12 +188,16 @@ const fall = () => {
   inFall = true
   player.y -= 4
 
-  if (player.y < 0 || player.y > screen.h) player.y = 370, player.x = 270
+  if (player.y < 0 || player.y > screen.h) {
+    player.x = lvls[lvl].player.startX
+    player.y = lvls[lvl].player.startY
+  }
 }
 
 const movePlayer = () => {
   if (inJump) jump()
   else if (inFall) fall()
+  if (checkCollision({...star, ...lvls[lvl].star}, player)) changeLvl()
   if (moveDirections.length === 0) return
   let moveDirection = moveDirections[0]
 
@@ -101,7 +207,7 @@ const movePlayer = () => {
     player.x += 2
     player.y += 0.5
     let crossing = false
-    blocks[color].forEach(block => {
+    lvls[lvl].blocks[color].forEach(block => {
       let result = checkCollision(block, player)
       if (result) crossing = result
     })
@@ -113,7 +219,7 @@ const movePlayer = () => {
     player.x -= 2
     player.y += 0.5
     let crossing = false
-    blocks[color].forEach(block => {
+    lvls[lvl].blocks[color].forEach(block => {
       let result = checkCollision(block, player)
       if (result) crossing = result
     })
@@ -144,11 +250,15 @@ const handlerKeydown = e => {
     color === 'black'? color = 'white' : color = 'black'
     document.body.style.background = color === 'black'? 'white' : '#333'
     let crossing = false
-    blocks[color].forEach(block => {
+    lvls[lvl].blocks[color].forEach(block => {
       let result = checkCollision(block, player)
       if (result) crossing = result
     })
-    if (crossing) player.y = 370, player.x = 270 
+    starSvg.classList = color
+    if (crossing) {
+      player.y = lvls[lvl].player.startY
+      player.x = lvls[lvl].player.startX 
+    }
     return
   }
   if (key !== 'up') moveDirections.push(key), pressed = key
@@ -191,14 +301,14 @@ const renderPlayer = () => {
 
 const renderTransparentBlocks = () => {
   if (color === 'black') {
-    blocks['white'].forEach(block => {
+    lvls[lvl].blocks['white'].forEach(block => {
       c.fillStyle = '#ebebeb'
       c.beginPath()
       c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
       c.closePath()
     })
   } else {
-    blocks['black'].forEach(block => {
+    lvls[lvl].blocks['black'].forEach(block => {
       c.fillStyle = '#474747'
       c.beginPath()
       c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
@@ -209,14 +319,14 @@ const renderTransparentBlocks = () => {
 
 const renderCollisionBlocks = () => {
   if (color === 'black') {
-    blocks['black'].forEach(block => {
+    lvls[lvl].blocks['black'].forEach(block => {
       c.fillStyle = '#1b1b1b'
       c.beginPath()
       c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
       c.closePath()
     })
   } else {
-    blocks['white'].forEach(block => {
+    lvls[lvl].blocks['white'].forEach(block => {
       c.fillStyle = '#fff'
       c.beginPath()
       c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
@@ -225,34 +335,8 @@ const renderCollisionBlocks = () => {
   }
 } 
 
-const renderBlocks = () => {
-  if (color === 'black') {
-    blocks['black'].forEach(block => {
-      c.fillStyle = '#1b1b1b'
-      c.beginPath()
-      c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
-      c.closePath()
-    })
-    blocks['white'].forEach(block => {
-      c.fillStyle = '#ebebeb'
-      c.beginPath()
-      c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
-      c.closePath()
-    })
-  } else {
-    blocks['black'].forEach(block => {
-      c.fillStyle = '#474747'
-      c.beginPath()
-      c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
-      c.closePath()
-    })
-    blocks['white'].forEach(block => {
-      c.fillStyle = '#fff'
-      c.beginPath()
-      c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
-      c.closePath()
-    })
-  }
+const renderStar = () => {
+  c.drawImage(star.sprite[color], lvls[lvl].star.x, screen.h - lvls[lvl].star.y, star.w, star.h )
 }
 
 const render = () => {
@@ -260,12 +344,16 @@ const render = () => {
   renderTransparentBlocks()
   renderPlayer()
   renderCollisionBlocks()
+  renderStar()
   window.requestAnimationFrame(() => render())
 }
 
-// player.sprite[color].onload = () => {
-//   render()
-// }
 player.sprite.onload = () => {
+  let cordX = lvls[lvl].star.x / (screen.w / window.innerWidth)
+  let cordY = lvls[lvl].star.y / (screen.h / window.innerHeight)
+
+  starSvg.style.left = cordX+'px'
+  starSvg.style.bottom = cordY+'px'
+  starSvg.style.width = star.w / (screen.w / window.innerWidth)
   render()
 }
