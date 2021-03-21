@@ -536,14 +536,13 @@ const handlerKeydown = e => {
   else if (!inFall) moveDirections.push(key)
 }
 
-moveInterval = setInterval(movePlayer, 5)
-
-document.addEventListener('keydown', handlerKeydown)
-document.addEventListener('keyup', e => {
-  if (e.code !== 'ArrowUp' && e.code !== 'Space') pressed = ''
-})
-
 // RENDER \/
+
+let homeScreen = {
+  isHome: true
+}
+
+let animCount = 0
 
 const clearCanvas = () => {
   if (color === 'black') c.fillStyle = '#fff'
@@ -559,9 +558,6 @@ const clearCanvas = () => {
 
   c.closePath()
 }
-
-let animCount = 0
-
 const renderPlayer = () => {
   let playerY = screen.h - player.y - player.h
   
@@ -576,7 +572,6 @@ const renderPlayer = () => {
   
   c.drawImage(player.sprite, 35*x, 70*y, 35, 70, player.x, playerY, 35, 70)
 }
-
 const renderTransparentBlocks = () => {
   if (color === 'black') {
     lvls[lvl].blocks['white'].forEach(block => {
@@ -594,7 +589,6 @@ const renderTransparentBlocks = () => {
     })
   }
 }
-
 const renderCollisionBlocks = () => {
   if (color === 'black') {
     lvls[lvl].blocks['black'].forEach((block, id) => {
@@ -614,20 +608,68 @@ const renderCollisionBlocks = () => {
     })
   }
 } 
-
 const renderStar = () => {
   c.drawImage(star.sprite[color], lvls[lvl].star.x, screen.h - lvls[lvl].star.y - star.h , star.w, star.h )
+}
+const renderHomescreen = () => {
+  c.font = "48px roboto"
+
+  if (color === 'black') c.fillStyle = '#1b1b1b'
+  else c.fillStyle = '#fff'
+
+  c.fillText('Press Enter ', screen.w/2-100, screen.h/2)
+
+  c.font = "32px roboto"
+  c.fillText('Controls', 10, screen.h-175)
+  c.font = "22px roboto"
+  c.fillText('W, arrow up - jump', 10, screen.h-150)
+  c.fillText('A, D or arrows - move', 10, screen.h-125)
+  c.fillText('Space - toggle color', 10, screen.h-100)
+  c.fillText('M - toggle edit mode', 10, screen.h-75)
+  c.fillText('C - create new block', 10, screen.h-50)
+  c.fillText('Del - remove selected block', 10, screen.h-25)
+  c.fillText('N - create new lvl', 10, screen.h)
 }
 
 const render = () => {
   clearCanvas()
-  renderTransparentBlocks()
-  renderPlayer()
-  renderCollisionBlocks()
-  renderStar()
+
+  if (!homeScreen.isHome) {
+    renderTransparentBlocks()
+    renderPlayer()
+    renderCollisionBlocks()
+    renderStar()
+  } else {
+    renderHomescreen()
+  }
 
   window.requestAnimationFrame(() => render())
 }
+
+
+
+
+const menuHandler = e => {
+  const keys = {
+    ArrowUp: 'up',
+    ArrowRight: 'right',
+    ArrowLeft: 'left',
+    ArrowDown: 'down',
+    KeyW: 'up',
+    KeyD: 'right',
+    KeyA: 'left',
+    KeyS: 'down',
+    Space: 'color',
+    Enter: 'select',
+  }
+  const key = keys[e.code]
+
+  if (key === 'select') {
+    homeScreen.isHome = false
+  }
+}
+
+document.addEventListener('keydown', menuHandler)
 
 player.sprite.onload = () => {
   let cordX = lvls[lvl].star.x / screenScale.x
@@ -636,6 +678,13 @@ player.sprite.onload = () => {
   starSvg.style.left = cordX+'px'
   starSvg.style.bottom = cordY+'px'
   starSvg.style.width = star.w / screenScale.x
+
+  moveInterval = setInterval(movePlayer, 5)
+
+  document.addEventListener('keydown', handlerKeydown)
+  document.addEventListener('keyup', e => {
+    if (e.code !== 'ArrowUp' && e.code !== 'Space') pressed = ''
+  })
 
   render()
 }
