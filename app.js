@@ -6,11 +6,16 @@ const screen = {
   h: 720,
 }
 
+const screenScale = {
+  x: screen.w / window.innerWidth,
+  y: screen.h / window.innerHeight,
+}
+
 let color = 'black'
+let lvl = 1
+let edit = false
 
-let lvl = 0
-
-const lvls = [
+let lvls = [
   {
     blocks: {
       black: [
@@ -32,7 +37,7 @@ const lvls = [
     blocks: {
       black: [
         { x: 0, y: 150, w: 1280, h: 20 },
-        { x: 640, y: 150, w: 20, h: 500 },
+        { x: 640, y: 150, w: 60, h: 500 },
       ],
       white: [
         { x: 0, y: 10, w: 1280, h: 100 },
@@ -73,6 +78,8 @@ const lvls = [
     }
   }
 ]
+let storagedData = localStorage.getItem('black-white')
+if (storagedData) lvls = JSON.parse(storagedData)
 
 const player = {
   sprite: new Image(),
@@ -89,6 +96,20 @@ const star = {
   },
   w: 35,
   h: 35,
+}
+
+let cursor = {
+  x: 0,
+  y: 0,
+  startX: 0,
+  startY: 0,
+  w: 1,
+  h: 1,
+  grab: false,
+  player: false,
+  star: false,
+  mode: null,
+  blockId: null,
 }
 
 star.sprite['black'].src = './star.svg'
@@ -112,7 +133,7 @@ let inFall = false
 let jumpCount = 0
 let jumpHeight = 200
 
-const checkCollision = (obj1,obj2) => {
+const checkCollision = (obj1, obj2) => {
   var XColl=false;
   var YColl=false;
 
@@ -146,8 +167,8 @@ const changeLvl = () => {
         player.y = lvls[lvl].player.startY
       }
 
-      let cordX = lvls[lvl].star.x / (screen.w / window.innerWidth)
-      let cordY = lvls[lvl].star.y / (screen.h / window.innerHeight)
+      let cordX = lvls[lvl].star.x / screenScale.x
+      let cordY = lvls[lvl].star.y / screenScale.y
 
       starSvg.style.left = cordX
       starSvg.style.bottom = cordY
@@ -185,8 +206,32 @@ const fall = () => {
     if (result) crossing = result
   })
   if (crossing) return inFall = false
+  player.y -= 1
+
+  crossing = false
+  lvls[lvl].blocks[color].forEach(block => {
+    let result = checkCollision(block, player)
+    if (result) crossing = result
+  })
+  if (crossing) return inFall = false
+  player.y -= 1
+
+  crossing = false
+  lvls[lvl].blocks[color].forEach(block => {
+    let result = checkCollision(block, player)
+    if (result) crossing = result
+  })
+  if (crossing) return inFall = false
+  player.y -= 1
+
+  crossing = false
+  lvls[lvl].blocks[color].forEach(block => {
+    let result = checkCollision(block, player)
+    if (result) crossing = result
+  })
+  if (crossing) return inFall = false
   inFall = true
-  player.y -= 4
+  player.y -= 1
 
   if (player.y < 0 || player.y > screen.h) {
     player.x = lvls[lvl].player.startX
@@ -231,6 +276,219 @@ const movePlayer = () => {
   if (pressed) moveDirections.push(pressed)
 }
 
+// HANDLERS \/
+
+const handlerKeydownE = e => {
+  const keys = {
+    ArrowUp: 'up',
+    ArrowRight: 'right',
+    ArrowLeft: 'left',
+    ArrowDown: 'down',
+    KeyW: 'up',
+    KeyA: 'left',
+    KeyS: 'down',
+    KeyD: 'right',
+    Space: 'color',
+    KeyM: 'edit',
+    KeyC: 'create',
+    KeyN: 'newlvl',
+    Delete: 'delete',
+  }
+  const key = keys[e.code]
+
+  if (key === 'edit') {
+    document.addEventListener('keydown', handlerKeydown)
+    canvas.removeEventListener('mousemove', handlerMousemove)
+    document.removeEventListener('mousedown', handlerMousedown)
+    document.removeEventListener('keydown', handlerKeydownE)
+    canvas.style.cursor = ''
+    cursor.blockId = null
+    moveInterval = setInterval(movePlayer, 5)
+    edit = false
+  }
+  if (key === 'newlvl') {
+    lvls.push({
+      blocks: {
+        black: [],
+        white: []
+      },
+      player: {
+        startX: 0,
+        startY: 0,
+      },
+      star: {
+        x: screen.w/2,
+        y: screen.h/2,
+      }
+    })
+    lvl = lvls.length-1
+    player.x = lvls[lvl].player.startX
+    player.y = lvls[lvl].player.startY
+  }
+  if (key === 'create') {
+    lvls[lvl].blocks[color].push({ x: screen.w/2-50, y: screen.h/2-50, w: 100, h: 100 },)
+  }
+  if (key === 'delete') {
+    lvls[lvl].blocks[color] = lvls[lvl].blocks[color].filter((block, id) => id !== cursor.blockId )
+    localStorage.setItem('black-white', JSON.stringify(lvls))
+  }
+  if (key === 'color') {
+    color === 'black'? color = 'white' : color = 'black'
+    document.body.style.background = color === 'black'? 'white' : '#333'
+    starSvg.classList = color
+  }
+
+  let block = lvls[lvl].blocks[color][cursor.blockId]
+  
+  if (key === 'left') {
+    block.x -= e.shiftKey ? 10 : 1
+  }
+  if (key === 'right') {
+    block.x += e.shiftKey ? 10 : 1
+  }
+  if (key === 'down') {
+    block.y -= e.shiftKey ? 10 : 1
+  }
+  if (key === 'up') {
+    block.y += e.shiftKey ? 10 : 1
+  }
+}
+
+const handlerMousemove = e => {
+  cursor = { ...cursor, ...{
+      x: e.offsetX,
+      y: canvas.offsetHeight - e.offsetY,
+    }
+  }
+
+  let crossedBlock = null
+  
+  if (!cursor.grab && !cursor.player && !cursor.star) {
+    if (checkCollision({...star, ...lvls[lvl].star}, cursor)) {
+      crossedBlock = star
+      cursor.mode = 'star'
+      cursor.blockId = null
+    } else if (checkCollision(player, cursor)) {
+      crossedBlock = player
+      cursor.mode = 'star'
+      cursor.blockId = null
+    } else lvls[lvl].blocks[color].forEach((block, id) => {
+      if (checkCollision(block, cursor)) {
+        crossedBlock = block
+        cursor.blockId = id
+      }
+    })
+  }
+
+  if (crossedBlock && cursor.mode !== 'star') {
+    canvas.style.cursor = 'grab'
+    if (cursor.y - (crossedBlock.y+crossedBlock.h) > -5
+    || cursor.y - crossedBlock.y < 5) {
+      canvas.style.cursor = 'ns-resize'
+    }
+    if (cursor.x - (crossedBlock.x+crossedBlock.w) > -5
+    || cursor.x - crossedBlock.x < 5) {
+      canvas.style.cursor = 'ew-resize'
+    }
+  } else if (cursor.mode === 'star') {
+    canvas.style.cursor = 'grab'
+  } else canvas.style.cursor = ''
+
+  
+  let block = lvls[lvl].blocks[color][cursor.blockId]
+  if (cursor.mode === 'grab' && cursor.grab) {
+    canvas.style.cursor = 'grabbing'
+    block.x += cursor.x-cursor.startX
+    block.y += cursor.y-cursor.startY
+    cursor.startX = cursor.x
+    cursor.startY = cursor.y
+  }
+  if (cursor.mode === 'ew-resize' && cursor.grab) {
+    if (cursor.x - block.x < block.w/2) { // left corner
+      let delta = cursor.x-cursor.startX
+      if (delta > 0) {
+        block.w -= cursor.x-cursor.startX
+        block.x += cursor.x-cursor.startX
+      } else {
+        block.w -= cursor.x-cursor.startX
+        block.x += cursor.x-cursor.startX
+      }
+    } else block.w += cursor.x-cursor.startX
+
+    if (block.w < 5) block.w = 5
+    cursor.startX = cursor.x
+    cursor.startY = cursor.y
+  }
+  if (cursor.mode === 'ns-resize' && cursor.grab) {
+    if (cursor.y - block.y < block.h/2) { // left corner
+      let delta = cursor.y-cursor.startY
+      if (delta > 0) {
+        block.h -= cursor.y-cursor.startY
+        block.y += cursor.y-cursor.startY
+      } else {
+        block.h -= cursor.y-cursor.startY
+        block.y += cursor.y-cursor.startY
+      }
+    } else block.h += cursor.y-cursor.startY
+    
+    if (block.h < 5) block.h = 5
+    cursor.startX = cursor.y
+    cursor.startY = cursor.y
+
+    
+    // if (block.h + cursor.y-cursor.startY >= 5) {
+    //   block.h += cursor.y-cursor.startY
+    // }
+    // cursor.startX = cursor.x
+    // cursor.startY = cursor.y
+  }
+
+  if (cursor.player) {
+    canvas.style.cursor = 'grabbing'
+    lvls[lvl].player.startX += cursor.x-cursor.startX
+    lvls[lvl].player.startY += cursor.y-cursor.startY
+    player.x = lvls[lvl].player.startX
+    player.y = lvls[lvl].player.startY
+    cursor.startX = cursor.x
+    cursor.startY = cursor.y
+  }
+  if (cursor.star) {
+    canvas.style.cursor = 'grabbing'
+    lvls[lvl].star.x += cursor.x-cursor.startX
+    lvls[lvl].star.y += cursor.y-cursor.startY
+    cursor.startX = cursor.x
+    cursor.startY = cursor.y
+  }
+
+  if (!cursor.grab) cursor.mode = canvas.style.cursor
+}
+
+const handlerMouseup = e => {
+  cursor.grab = false
+  cursor.star = false
+  cursor.player = false
+  canvas.removeEventListener('mouseup', handlerMouseup)
+  localStorage.setItem('black-white', JSON.stringify(lvls))
+}
+
+const handlerMousedown = e => {
+  cursor.grab = true
+  if (checkCollision({...star, ...lvls[lvl].star}, cursor)) {
+    cursor.star = true
+    cursor.mode = 'star'
+    cursor.blockId = null
+    cursor.grab = false
+  } else if (checkCollision(player, cursor)) {
+    cursor.player = true
+    cursor.mode = 'star'
+    cursor.blockId = null
+    cursor.grab = false
+  }
+  cursor.startX = e.offsetX,
+  cursor.startY = canvas.offsetHeight - e.offsetY,
+  canvas.addEventListener('mouseup', handlerMouseup)
+}
+
 const handlerKeydown = e => {
   const keys = {
     ArrowUp: 'up',
@@ -240,8 +498,20 @@ const handlerKeydown = e => {
     KeyD: 'right',
     KeyA: 'left',
     Space: 'color',
+    KeyM: 'edit',
   }
   const key = keys[e.code]
+
+  if (key === 'edit') {
+    document.removeEventListener('keydown', handlerKeydown)
+    document.addEventListener('keydown', handlerKeydownE)
+    canvas.addEventListener('mousemove', handlerMousemove)
+    document.addEventListener('mousedown', handlerMousedown)
+    clearInterval(moveInterval)
+    edit = true
+    return
+  }
+
   if (!key || pressed === key) return
   
   if (key === 'color') {
@@ -261,6 +531,7 @@ const handlerKeydown = e => {
     }
     return
   }
+  
   if (key !== 'up') moveDirections.push(key), pressed = key
   else if (!inFall) moveDirections.push(key)
 }
@@ -272,12 +543,20 @@ document.addEventListener('keyup', e => {
   if (e.code !== 'ArrowUp' && e.code !== 'Space') pressed = ''
 })
 
+// RENDER \/
 
 const clearCanvas = () => {
   if (color === 'black') c.fillStyle = '#fff'
   else c.fillStyle = '#333'
   c.beginPath()
   c.fillRect(0,0, screen.w, screen.h)
+  if (edit) {
+    c.textAlign = 'left'
+    c.fillStyle = 'red'
+    c.font = '20px Roboto'
+    c.fillText('EDIT', 0, 20)
+  }
+
   c.closePath()
 }
 
@@ -294,7 +573,6 @@ const renderPlayer = () => {
 
   let y = color === 'black'? 0 : 2
   if (moveDirections[0] === 'left') y++
-  
   
   c.drawImage(player.sprite, 35*x, 70*y, 35, 70, player.x, playerY, 35, 70)
 }
@@ -319,15 +597,17 @@ const renderTransparentBlocks = () => {
 
 const renderCollisionBlocks = () => {
   if (color === 'black') {
-    lvls[lvl].blocks['black'].forEach(block => {
+    lvls[lvl].blocks['black'].forEach((block, id) => {
       c.fillStyle = '#1b1b1b'
+      if (id === cursor.blockId) c.fillStyle = '#fdd835'
       c.beginPath()
       c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
       c.closePath()
     })
   } else {
-    lvls[lvl].blocks['white'].forEach(block => {
+    lvls[lvl].blocks['white'].forEach((block, id) => {
       c.fillStyle = '#fff'
+      if (id === cursor.blockId) c.fillStyle = '#fdd835'
       c.beginPath()
       c.fillRect(block.x, screen.h - block.y - block.h, block.w, block.h)
       c.closePath()
@@ -336,7 +616,7 @@ const renderCollisionBlocks = () => {
 } 
 
 const renderStar = () => {
-  c.drawImage(star.sprite[color], lvls[lvl].star.x, screen.h - lvls[lvl].star.y, star.w, star.h )
+  c.drawImage(star.sprite[color], lvls[lvl].star.x, screen.h - lvls[lvl].star.y - star.h , star.w, star.h )
 }
 
 const render = () => {
@@ -345,15 +625,22 @@ const render = () => {
   renderPlayer()
   renderCollisionBlocks()
   renderStar()
+
   window.requestAnimationFrame(() => render())
 }
 
 player.sprite.onload = () => {
-  let cordX = lvls[lvl].star.x / (screen.w / window.innerWidth)
-  let cordY = lvls[lvl].star.y / (screen.h / window.innerHeight)
+  let cordX = lvls[lvl].star.x / screenScale.x
+  let cordY = lvls[lvl].star.y / screenScale.y
 
   starSvg.style.left = cordX+'px'
   starSvg.style.bottom = cordY+'px'
-  starSvg.style.width = star.w / (screen.w / window.innerWidth)
+  starSvg.style.width = star.w / screenScale.x
+
   render()
 }
+
+// M: toggle edit mode
+// C: create new block
+// Del: remove selected block
+// N: create new lvl
