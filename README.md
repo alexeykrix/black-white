@@ -1,7 +1,8 @@
 # https://alexeykrix.github.io/black-white/
 
 ### Controls
-+ W, A, D or arrows: move 
++ W, arrow up: jump
++ A, D or arrows: move 
 + Space: toggle color
 + M: toggle edit mode
 + C: create new block
