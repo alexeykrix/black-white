@@ -224,3 +224,6 @@ let data = [{
     y: 558
   }
 }]
+
+let storagedData = localStorage.getItem('black-white-user')
+if (storagedData) data = [...data, ...JSON.parse(storagedData)]
