@@ -170,3 +170,21 @@ select {
 #fullscreenSvg.white path {
   fill: white
 }
+
+.rotate-phone {
+  position: absolute;
+  z-index: 123;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  display: block;
+  padding: 0 15%;
+  /* transform: translate(-50%, -50%); */
+  background: #fff;
+  transition: translateX 0.5s ease-in-out, scale 1s linear 0.5s;
+}
+.rotate-phone.hide {
+  transform: translateX(100%) scale(0);
+}

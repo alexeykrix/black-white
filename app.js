@@ -81,6 +81,8 @@ menu = {
     this.el.addEventListener('touchstart', handler.MenuTouchStart)
     this.el.addEventListener('click', handler.MenuClick)
     fullscreenSvg.addEventListener('click', handler.ClickFullscreen)
+    window.addEventListener('resize', checkOrientation)
+    setTimeout(()=> checkOrientation(), 0)
   }
 },
 settings = {
@@ -224,6 +226,17 @@ const requestFullScreen = el => {
   }
 
   setTimeout(() => stick.enabled ? stick.init() :'' , 1000);
+}
+const checkOrientation = () => {
+  if (window.innerWidth / window.innerHeight > 1) {// landscape
+    document.querySelector('.rotate-phone').classList.add('hide')
+    menu.el.classList.remove('hide')
+  } else {// vertical
+    document.querySelector('.rotate-phone').classList.remove('hide')
+    if (!settings.el) {
+      menu.el.classList.add('hide')
+    } else settings.el.classList.add('hide'), menu.el.classList.add('hide')
+  }
 }
 const checkCollision = (obj1, obj2) => {
   var XColl = false;
@@ -672,7 +685,7 @@ const handler = {
         init()
       } if (btnId === 2) {
         menu.el.classList.add('hide')
-        settings.init()
+        settings.el ? settings.el.classList.remove('hide') : settings.init()
         setTimeout(() => settings.el.classList.remove('hide'), 100)
         settings.form.addEventListener('change', e => {
           profile[e.target.name] = e.target.value
@@ -699,7 +712,7 @@ const handler = {
       } 
       if (btnId === 2) {
         menu.el.classList.add('hide')
-        settings.init()
+        settings.el ? settings.el.classList.remove('hide') : settings.init()
         setTimeout(() => settings.el.classList.remove('hide'), 100)
         settings.form.addEventListener('change', e => {
           profile[e.target.name] = e.target.value
@@ -735,10 +748,9 @@ const init = () => {
 menu.init()
 
 
-
-
 // TODO: 
 // 1. physical correct motion
 // 2. jump height can be different
 // 3. add editor interface
 // 4. add new blocks like spikes or third colored blocks or blocks that have movement
+// 5. check screen origin, and if orientation is vertical ask for rotate
