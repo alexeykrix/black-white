@@ -12,6 +12,7 @@ inJump = false,
 inFall = false,
 jumpCount = 0,
 jumpHeight = 200,
+jumpCoef = 1,
 stick = new Stick('.stick', '#474747', 100),
 cursor = {
   x: 0,
@@ -47,6 +48,9 @@ player = {
   h: 70,
   x: lvls[lvl].player.startX,
   y: lvls[lvl].player.startY,
+  s: 0,
+  ax: 0,
+  maxS: 2,
 },
 star = {
   sprite: {
@@ -308,7 +312,7 @@ const jump = () => {
   })
   if (crossing) return inJump = false, jumpCount = 0, inFall = true, player.y -= 4
 
-  if (jumpCount >= jumpHeight) {
+  if (jumpCount >= jumpHeight * jumpCoef) {
     inJump = false
     jumpCount = 0
     inFall = true
@@ -359,6 +363,8 @@ const movePlayer = () => {
   } else fullscreenSvg.style.transform = ''
   if (stick.enabled) { // handle stick move
     let values = stick.getValues()
+    player.ax = values.ax
+    jumpCoef = values.strength
     if (values.direction.x !== '') {
       if (values.direction.x !== values.pressed) {
         if (moveDirections[moveDirections.length-1] !== values.direction.x) {
@@ -376,37 +382,87 @@ const movePlayer = () => {
   if (inJump) jump()
   else if (inFall) fall()
   if (checkCollision({ ...star, ...lvls[lvl].star }, player)) changeLvl()
-  if (moveDirections.length === 0) return
-  let moveDirection = moveDirections[0]
+  // if (moveDirections.length === 0) return
+  let moveDirection = moveDirections[0] || null
+  
+  if (moveDirection && moveDirection === 'right') {
+    if (Math.abs(player.ax) < 1) player.ax += 0.02
+  }
+  if (moveDirection && moveDirection === 'left') {
+    if (Math.abs(player.ax) < 1) player.ax += -0.02
+  }
 
-  if (moveDirection === 'up') inJump = true, jump()
-  if (moveDirection === 'right') {
-    if (!inFall) fall()
-    player.x += 2
-    player.y += 0.5
+
+  if (!moveDirection && !stick.enabled) {
+    player.ax = 0
+  }
+// if axeleration isn`t avaible, but move speed bigger the 0
+//  slowdown
+  if (player.ax === 0 && player.s !== 0) {
+    if (player.s > 0) player.s -= 0.05
+    else player.s += 0.05
+  }
+  // stop moving if speed < .1
+  if (Math.abs(player.s) < 0.1) player.s = 0
+  
+  // if axeleration is avaible => change move speed
+  if (player.ax !== 0 && stick.enabled) { 
+    if (Math.abs(player.s + player.ax) < player.maxS * Math.abs(player.ax)) {
+      player.s += player.ax
+    } else {
+      if (player.s < 0) player.s = -player.maxS * Math.abs(player.ax)
+      else player.s = player.maxS * Math.abs(player.ax)
+    }
+  } if (player.ax !== 0 && !stick.enabled) { 
+    if (Math.abs(player.s + player.ax) < player.maxS) {
+      player.s += player.ax
+    } else {
+      if (player.s < 0) player.s = -player.maxS
+      else player.s = player.maxS
+    }
+  }
+  
+  player.x += player.s
+
+  if (!inFall) fall()
+  player.y += 0.5
     let crossing = false
     lvls[lvl].blocks[color].forEach(block => {
       let result = checkCollision(block, player)
       if (result) crossing = result
     })
-    if (crossing || player.x + player.w > 1280) player.x -= 2
+    if (crossing || player.x + player.w > 1280) player.x -= player.s
     player.y -= 0.5
-  }
-  if (moveDirection === 'left') {
-    if (!inFall) fall()
-    player.x -= 2
-    player.y += 0.5
-    let crossing = false
-    lvls[lvl].blocks[color].forEach(block => {
-      let result = checkCollision(block, player)
-      if (result) crossing = result
-    })
-    if (crossing || player.x < 0) player.x += 2
-    player.y -= 0.5
-  }
 
-  moveDirections.shift()
-  if (pressed) moveDirections.push(pressed)
+  if (moveDirection && moveDirection === 'up') inJump = true, jump()
+  
+  // if (moveDirection === 'right') {
+  //   if (!inFall) fall()
+  //   player.x += player.s
+  //   player.y += 0.5
+  //   let crossing = false
+  //   lvls[lvl1].blocks[color].forEach(block => {
+  //     let result = checkCollision(block, player)
+  //     if (result) crossing = result
+  //   })
+  //   if (crossing || player.x + player.w > 1280) player.x -= 2
+  //   player.y -= 0.5
+  // }
+  // if (moveDirection === 'left') {
+  //   if (!inFall) fall()
+  //   player.x += player.s
+  //   player.y += 0.5
+  //   let crossing = false
+  //   lvls[lvl].blocks[color].forEach(block => {
+  //     let result = checkCollision(block, player)
+  //     if (result) crossing = result
+  //   })
+  //   if (crossing || player.x < 0) player.x += 2
+  //   player.y -= 0.5
+  // }
+
+  moveDirection? moveDirections.shift() :''
+  if (pressed && moveDirection) moveDirections.push(pressed)
 }
 const switchColor = () => {
   if (!inFall) player.y += 4, fall()
@@ -662,6 +718,10 @@ const handler = {
       return
     }
 
+    // if (key === 'right') player.ax = 1
+    // else if (key === 'left') player.ax = -1
+    
+
     if (key == 'fullscreen') return requestFullScreen(document.documentElement)
 
     if (!key || pressed === key) return
@@ -679,6 +739,13 @@ const handler = {
       KeyA: 'left',
     }
     const key = keys[e.code]
+    if (key === 'right' || key === 'left') {
+      player.ax = 0
+      
+      // setTimeout(() => {
+      //   player.ax = 0
+      // }, 10);
+    }
     if (e.code !== 'ArrowUp' && e.code !== 'KeyW' && e.code !== 'Space') pressed = ''
   },
   MenuClick: e => {

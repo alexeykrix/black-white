@@ -50,7 +50,7 @@ class Stick {
 
   checkDirection = () => {
     this.stick.radius = Math.sqrt(this.stick.dotX**2 + this.stick.dotY**2)
-
+    this.stick.ax = this.stick.dotX
     const sin = Math.abs(this.stick.dotY) / this.stick.radius
     let angle = Math.round(Math.asin(sin) * 57.2958)
 
@@ -141,12 +141,11 @@ class Stick {
           clientY: e.clientY,
         }
       }
-
-      
     }
     this.handlerMove(evt)
     document.addEventListener('touchmove', this.handlerMove)
     this.stick.pressed = true
+    this.stick.ax = this.stick.dotX
   }
   handlerEnd = evt => {
     let e = evt.changedTouches? evt.changedTouches[0] : evt
@@ -162,7 +161,7 @@ class Stick {
     this.updateDot()
     this.stick.pressed = false
     this.wrapper.style.display = 'none'
-    
+    this.stick.ax = 0
   }
   handlerCancel = e => e.preventDefault()
 
@@ -179,6 +178,7 @@ class Stick {
     strength: Math.round(this.stick.radius)*0.02,
     direction: this.stick.direction,
     pressed: this.stick.pressed,
+    ax: this.stick.ax*2/100 || 0,
   })
 }
 
