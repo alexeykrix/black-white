@@ -303,6 +303,10 @@ const changeLvl = () => {
 
 }
 const jump = () => {
+  // jumpCount = 0
+  // jumpHeight = 200
+  // jumpCoef = 1
+
   player.y += 4
   jumpCount += 4
   let crossing = false
@@ -311,7 +315,6 @@ const jump = () => {
     if (result) crossing = result
   })
   if (crossing) return inJump = false, jumpCount = 0, inFall = true, player.y -= 4
-
   if (jumpCount >= jumpHeight * jumpCoef) {
     inJump = false
     jumpCount = 0
@@ -382,17 +385,15 @@ const movePlayer = () => {
   if (inJump) jump()
   else if (inFall) fall()
   if (checkCollision({ ...star, ...lvls[lvl].star }, player)) changeLvl()
-  // if (moveDirections.length === 0) return
+
   let moveDirection = moveDirections[0] || null
   
-  if (moveDirection && moveDirection === 'right') {
+  if (moveDirection && moveDirection === 'right' && !stick.enabled) {
     if (Math.abs(player.ax) < 1) player.ax += 0.02
   }
-  if (moveDirection && moveDirection === 'left') {
+  if (moveDirection && moveDirection === 'left' && !stick.enabled) {
     if (Math.abs(player.ax) < 1) player.ax += -0.02
   }
-
-
   if (!moveDirection && !stick.enabled) {
     player.ax = 0
   }
@@ -435,31 +436,6 @@ const movePlayer = () => {
     player.y -= 0.5
 
   if (moveDirection && moveDirection === 'up') inJump = true, jump()
-  
-  // if (moveDirection === 'right') {
-  //   if (!inFall) fall()
-  //   player.x += player.s
-  //   player.y += 0.5
-  //   let crossing = false
-  //   lvls[lvl1].blocks[color].forEach(block => {
-  //     let result = checkCollision(block, player)
-  //     if (result) crossing = result
-  //   })
-  //   if (crossing || player.x + player.w > 1280) player.x -= 2
-  //   player.y -= 0.5
-  // }
-  // if (moveDirection === 'left') {
-  //   if (!inFall) fall()
-  //   player.x += player.s
-  //   player.y += 0.5
-  //   let crossing = false
-  //   lvls[lvl].blocks[color].forEach(block => {
-  //     let result = checkCollision(block, player)
-  //     if (result) crossing = result
-  //   })
-  //   if (crossing || player.x < 0) player.x += 2
-  //   player.y -= 0.5
-  // }
 
   moveDirection? moveDirections.shift() :''
   if (pressed && moveDirection) moveDirections.push(pressed)
