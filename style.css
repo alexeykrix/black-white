@@ -181,7 +181,6 @@ select {
   box-sizing: border-box;
   display: block;
   padding: 0 15%;
-  /* transform: translate(-50%, -50%); */
   background: #fff;
   transition: translateX 0.5s ease-in-out, scale 1s linear 0.5s;
 }

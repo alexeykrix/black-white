@@ -11,6 +11,7 @@ class Stick {
       dotX: null,
       dotY: null,
       radius: null,
+      old: {},
       direction: {
         x: '',
         y: '',
@@ -88,6 +89,10 @@ class Stick {
     if (Math.pow(mouseX, 2) + Math.pow(mouseY, 2) < (this.stick.width/2)**2) {
       this.stick.dotX = e.clientX - this.stick.x - this.stick.width/2
       this.stick.dotY = e.clientY - this.stick.y - this.stick.width/2
+
+      if (Math.sqrt(Math.pow(mouseX, 2) + Math.pow(mouseY, 2)) < 10 ) {
+        this.stick.direction = { x: '', y: '' }
+      }
     } else {
       let bigLine = Math.sqrt(mouseX**2 + mouseY**2)
       let sin = mouseY / bigLine
@@ -96,15 +101,50 @@ class Stick {
       this.stick.dotX = cos * this.stick.width/2
       this.stick.dotY = sin * this.stick.width/2
     }
+
+    this.stick.old = {
+      x: this.stick.x,
+      y: this.stick.y,
+      left: this.stick.old.left,
+      bottom: this.stick.old.bottom,
+      clientX: e.clientX,
+      clientY: e.clientY,
+    }
     
     this.updateDot()
     this.checkDirection()
   }
-  handlerStart = evt => {
+  handlerStart = evt => {// TODO:
     let e = evt.touches? evt.touches[0] : evt
-    if (!e.target.closest('.stick__wrapper')) return
+    if (!e.target.closest('.stick__wrapper')) {
+      if (e.clientX > window.innerWidth/2) return
+      this.wrapper.style.display = 'block'
+      
+      if (this.stick.old.clientX
+      && Math.abs(e.clientX - this.stick.old.clientX) < 30 
+      && Math.abs(e.clientY - this.stick.old.clientY) < 30 ) {
+        this.wrapper.style.left = this.stick.old.left
+        this.wrapper.style.bottom = this.stick.old.bottom
+        this.stick.x = this.stick.old.x
+        this.stick.y = this.stick.old.y
+      } else {
+        this.wrapper.style.left = e.clientX - this.stick.width/2 +'px'
+        this.wrapper.style.bottom = window.innerHeight - this.stick.width/2  - e.clientY+'px'
+        this.stick.x = this.wrapper.offsetLeft
+        this.stick.y = this.wrapper.offsetTop
+        this.stick.old = {
+          x: this.stick.x,
+          y: this.stick.y,
+          left: e.clientX - this.stick.width/2 +'px',
+          bottom: window.innerHeight - this.stick.width/2  - e.clientY+'px',
+          clientX: e.clientX,
+          clientY: e.clientY,
+        }
+      }
+
+      
+    }
     this.handlerMove(evt)
-    document.addEventListener('mousemove', this.handlerMove)
     document.addEventListener('touchmove', this.handlerMove)
     this.stick.pressed = true
   }
@@ -113,7 +153,7 @@ class Stick {
     if (evt.changedTouches) { 
       if (evt.changedTouches[0].target.closest('#invertSvg')) return
     }
-    document.removeEventListener('mousemove', this.handlerMove)
+    
     document.removeEventListener('touchmove', this.handlerMove)
     this.stick.dotX = 0
     this.stick.dotY = 0
@@ -121,6 +161,8 @@ class Stick {
     this.stick.direction = { x: '', y: '' }
     this.updateDot()
     this.stick.pressed = false
+    this.wrapper.style.display = 'none'
+    
   }
   handlerCancel = e => e.preventDefault()
 

@@ -207,13 +207,20 @@ const render =  {
   
   },
   render: function () {
+    if (profile.camera === 'fixed') {
+      canvas.width = screen.w = window.innerWidth * window.devicePixelRatio/2
+      canvas.height = screen.h = window.innerHeight * window.devicePixelRatio/2
+      canvas.style.width = '100%'
+      canvas.style.height = '100%'
+    }
+
     this.clearCanvas()
     this.renderTransparentBlocks()
     this.renderPlayer()
     this.renderCollisionBlocks()
     this.renderStar()
 
-    window.requestAnimationFrame(() =>this.render())
+    window.requestAnimationFrame(() => this.render())
   },
 }
 const requestFullScreen = el => {
@@ -753,4 +760,4 @@ menu.init()
 // 2. jump height can be different
 // 3. add editor interface
 // 4. add new blocks like spikes or third colored blocks or blocks that have movement
-// 5. check screen origin, and if orientation is vertical ask for rotate
+// 5. moveble stick
