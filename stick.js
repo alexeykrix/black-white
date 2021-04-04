@@ -114,7 +114,7 @@ class Stick {
     this.updateDot()
     this.checkDirection()
   }
-  handlerStart = evt => {// TODO:
+  handlerStart = evt => {
     let e = evt.touches? evt.touches[0] : evt
     if (!e.target.closest('.stick__wrapper')) {
       if (e.clientX > window.innerWidth/2) return

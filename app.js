@@ -8,10 +8,7 @@ lvls = data,
 moveDirections = [],
 moveInterval = null,
 pressed = '',
-inJump = false,
 inFall = false,
-jumpCount = 0,
-jumpHeight = 189.5,
 jumpCoef = 1,
 stick = new Stick('.stick', '#474747', 100),
 cursor = {
@@ -53,7 +50,7 @@ player = {
   maxVx: 2,
   vy: 0,
   ay: -0.1,
-  maxVy: 2,
+  maxVy: 4,
 },
 star = {
   sprite: {
@@ -149,7 +146,7 @@ const render =  {
   
     if (moveDirections[0] === 'left' || moveDirections[0] === 'right') {
       this.animCount < 4 ? this.animCount++ : this.animCount = 1
-      if (inFall || inJump) this.animCount = 1
+      if (player.vy) this.animCount = 1
     } else this.animCount = 0
     let x = this.animCount
   
@@ -215,8 +212,8 @@ const render =  {
   },
   render: function () {
     if (profile.camera === 'fixed') {
-      canvas.width = screen.w = window.innerWidth * window.devicePixelRatio/2
-      canvas.height = screen.h = window.innerHeight * window.devicePixelRatio/2
+      canvas.width = screen.w = window.innerWidth * window.devicePixelRatio
+      canvas.height = screen.h = window.innerHeight * window.devicePixelRatio
       canvas.style.width = '100%'
       canvas.style.height = '100%'
     }
@@ -304,88 +301,25 @@ const changeLvl = () => {
       starSvg.style.transform = ''
       setTimeout(() => {
         starSvg.style.opacity = 0
-        fall()
       }, 900);
     }, 1000);
   }, 10);
 
 }
-const jump = () => {
-  // if (jumpCount === 0) player.vy = 5
-  // player.ay = -0.065
-  // if (player.vy + player.ay > 0.01) player.vy += player.ay
-  
-  // player.y += player.vy
-  // jumpCount += player.vy
-  // let crossing = false
-  // lvls[lvl].blocks[color].forEach(block => {
-  //   let result = checkCollision(block, player)
-  //   if (result) crossing = result
-  // })
-
-  // if (crossing || jumpCount >= jumpHeight * jumpCoef) {
-  //   inJump = false
-  //   jumpCount = 0
-  //   inFall = true
-  // }
-
-  player.y += 4
-  jumpCount += 4
+const jump = () => player.vy = 5 * (jumpCoef> 0.5 ? jumpCoef: 0.5)
+const isCrossing = () => {
   let crossing = false
   lvls[lvl].blocks[color].forEach(block => {
     let result = checkCollision(block, player)
     if (result) crossing = result
   })
-  if (crossing) return inJump = false, jumpCount = 0, inFall = true, player.y -= 4
-  if (jumpCount >= jumpHeight * jumpCoef) {
-    inJump = false
-    jumpCount = 0
-    inFall = true
-  }
-}
-const fall = () => {
-  let crossing = false
-  lvls[lvl].blocks[color].forEach(block => {
-    let result = checkCollision(block, player)
-    if (result) crossing = result
-  })
-  if (crossing) return inFall = false
-  player.y -= 1
-
-  crossing = false
-  lvls[lvl].blocks[color].forEach(block => {
-    let result = checkCollision(block, player)
-    if (result) crossing = result
-  })
-  if (crossing) return inFall = false
-  player.y -= 1
-
-  crossing = false
-  lvls[lvl].blocks[color].forEach(block => {
-    let result = checkCollision(block, player)
-    if (result) crossing = result
-  })
-  if (crossing) return inFall = false
-  player.y -= 1
-
-  crossing = false
-  lvls[lvl].blocks[color].forEach(block => {
-    let result = checkCollision(block, player)
-    if (result) crossing = result
-  })
-  if (crossing) return inFall = false
-  inFall = true
-  player.y -= 1
-
-  if (player.y < 0) {
-    player.x = lvls[lvl].player.startX
-    player.y = lvls[lvl].player.startY
-  }
+  return crossing
 }
 const movePlayer = () => {
   if (document.fullscreenElement) {
     fullscreenSvg.style.transform = 'scale(0) translateY(-100px)'
   } else fullscreenSvg.style.transform = ''
+  
   if (stick.enabled) { // handle stick move
     let values = stick.getValues()
     player.ax = values.ax
@@ -398,72 +332,95 @@ const movePlayer = () => {
       }
     }
     if (values.direction.y === 'up') {
-      if (!inJump && !inFall) inJump = true, jump()
+      if (!inFall) jump()
     }
     if (values.pressed) pressed = values.direction.x
     else pressed = ''
   }
-
-  if (inJump) jump()
-  else if (inFall) fall()
   if (checkCollision({ ...star, ...lvls[lvl].star }, player)) changeLvl()
-
   let moveDirection = moveDirections[0] || null
-  
-  if (moveDirection && moveDirection === 'right' && !stick.enabled) {
-    if (Math.abs(player.ax) < 1) player.ax += 0.02
-  }
-  if (moveDirection && moveDirection === 'left' && !stick.enabled) {
-    if (Math.abs(player.ax) < 1) player.ax += -0.02
-  }
-  if (!moveDirection && !stick.enabled) {
-    player.ax = 0
-  }
-// if axeleration isn`t avaible, but move speed bigger the 0
-//  slowdown
-  if (player.ax === 0 && player.vx !== 0) {
-    if (player.vx > 0) player.vx -= 0.05
-    else player.vx += 0.05
-  }
-  // stop moving if speed < .1
-  if (Math.abs(player.vx) < 0.1) player.vx = 0
-  
-  // if axeleration is avaible => change move speed
-  if (player.ax !== 0 && stick.enabled) { 
-    if (Math.abs(player.vx + player.ax) < player.maxVx * Math.abs(player.ax)) {
-      player.vx += player.ax
-    } else {
-      if (player.vx < 0) player.vx = -player.maxVx * Math.abs(player.ax)
-      else player.vx = player.maxVx * Math.abs(player.ax)
-    }
-  } if (player.ax !== 0 && !stick.enabled) { 
-    if (Math.abs(player.vx + player.ax) < player.maxVx) {
-      player.vx += player.ax
-    } else {
-      if (player.vx < 0) player.vx = -player.maxVx
-      else player.vx = player.maxVx
-    }
-  }
-  
-  player.x += player.vx
 
-  if (!inFall && !inJump) fall()
-  player.y += 0.5
-    let crossing = false
-    lvls[lvl].blocks[color].forEach(block => {
-      let result = checkCollision(block, player)
-      if (result) crossing = result
-    })
-    if (crossing || player.x + player.w > 1280) player.x -= player.vx
-    player.y -= 0.5
+  {  // movement X
+    if (player.vx === 0) player.x = Math.ceil(player.x)
 
-  if (moveDirection && moveDirection === 'up') inJump = true, jump()
+    if (moveDirection && moveDirection === 'right' && !stick.enabled) {
+      if (Math.abs(player.ax) < 1) player.ax += 0.02
+    }
+    if (moveDirection && moveDirection === 'left' && !stick.enabled) {
+      if (Math.abs(player.ax) < 1) player.ax += -0.02
+    }
+    if (!moveDirection && !stick.enabled) {
+      player.ax = 0
+    }
+  // if axeleration isn`t avaible, but move speed bigger the 0
+  //  slowdown
+    if (player.ax === 0 && player.vx !== 0) {
+      if (player.vx > 0) player.vx -= 0.05
+      else player.vx += 0.05
+    }
+    // stop moving if speed < .1
+    if (Math.abs(player.vx) < 0.1) player.vx = 0
+    
+    // if axeleration is avaible => change move speed
+    if (player.ax !== 0 && stick.enabled) { 
+      if (Math.abs(player.vx + player.ax) < player.maxVx * Math.abs(player.ax)) {
+        player.vx += player.ax
+      } else {
+        if (player.vx < 0) player.vx = -player.maxVx * Math.abs(player.ax)
+        else player.vx = player.maxVx * Math.abs(player.ax)
+      }
+    } if (player.ax !== 0 && !stick.enabled) { 
+      if (Math.abs(player.vx + player.ax) < player.maxVx) {
+        player.vx += player.ax
+      } else {
+        if (player.vx < 0) player.vx = -player.maxVx
+        else player.vx = player.maxVx
+      }
+    }
+    
+    player.x += player.vx
+    if (isCrossing() || player.x + player.w > 1280) player.x -= player.vx
+  }
+
+  {  // movement Y
+    player.y = Math.ceil(player.y)
+    player.vy > 0 ? player.y += player.vy : player.y -= 1
+    
+    if (isCrossing()) {
+      player.vy = 0
+      inFall = false
+    } else inFall = true
+    player.vy > 0 ? player.y -= player.vy : player.y += 1
+
+    if (inFall) {
+      if (player.vy > -player.maxVy) player.vy += player.ay
+      else if (player.vy < 0) player.vy = -player.maxVy
+    
+      player.y += player.vy
+      player.y = Math.ceil(player.y)
+    
+      if (player.y < 0) {
+        player.x = lvls[lvl].player.startX
+        player.y = lvls[lvl].player.startY
+      }
+    
+      if (isCrossing()) {
+        while (isCrossing()) player.y += 1
+        player.vy = 0
+        inFall = false
+      } else inFall = true
+    }
+
+  }
+
+  
+  if (moveDirection && moveDirection === 'up' && !inFall) jump()
 
   moveDirection? moveDirections.shift() :''
   if (pressed && moveDirection) moveDirections.push(pressed)
 }
 const switchColor = () => {
-  if (!inFall) player.y += 4, fall()
+  if (!inFall) player.y += 4//, fall()
     player.y += 4
     color === 'black' ? color = 'white' : color = 'black'
     document.body.style.background = color === 'black' ? 'white' : '#333'
@@ -805,8 +762,6 @@ const handler = {
   },
 }
 
-
-
 const init = () => {
   screen.scale = {
     x: screen.w / window.innerWidth,
@@ -821,8 +776,5 @@ menu.init()
 
 
 // TODO: 
-// 1. physical correct motion
-// 2. jump height can be different
 // 3. add editor interface
 // 4. add new blocks like spikes or third colored blocks or blocks that have movement
-// 5. moveble stick
