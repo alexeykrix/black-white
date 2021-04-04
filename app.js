@@ -154,8 +154,8 @@ const render =  {
     if (moveDirections[0] === 'left') y++
   
     if (this.mode === 'static') { 
-      c.drawImage(player.sprite, 35 * x, 70 * y, 35, 70, player.x, playerY, 35, 70)
-    } else c.drawImage(player.sprite, 35 * x, 70 * y, 35, 70, screen.w/2, screen.h/2, 35, 70)
+      c.drawImage(player.sprite, 35 * x, 70 * y, 35, 70, player.x, playerY+1, 35, 70)
+    } else c.drawImage(player.sprite, 35 * x, 70 * y, 35, 70, screen.w/2, screen.h/2+1, 35, 70)
   },
   renderTransparentBlocks: function () {
     let playerY = screen.h - player.y - player.h
