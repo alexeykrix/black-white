@@ -86,7 +86,10 @@ menu = {
     this.el.addEventListener('click', handler.MenuClick)
     fullscreenSvg.addEventListener('click', handler.ClickFullscreen)
     window.addEventListener('resize', checkOrientation)
-    setTimeout(()=> checkOrientation(), 0)
+    let timeout = setTimeout(()=> {
+      checkOrientation()
+      clearTimeout(timeout)
+    }, 0)
   }
 },
 settings = {
@@ -265,7 +268,10 @@ const requestFullScreen = el => {
     y: screen.h / window.innerHeight,
   }
 
-  setTimeout(() => stick.enabled ? stick.init() :'' , 1000);
+  let timeout = setTimeout(() => {
+    stick.enabled ? stick.init() :''
+    clearTimeout(timeout)
+  }, 1000)
 }
 const checkOrientation = () => {
   if (document.fullscreenElement) {
@@ -320,30 +326,33 @@ const changeLvl = () => {
   player.y = 100000
 
   starSvg.style.opacity = 1
-  setTimeout(() => {
+  let timeout1 = setTimeout(() => {
     starSvg.style.left = window.innerWidth / 2 + 'px'
     starSvg.style.bottom = window.innerHeight / 2 + 'px'
     starSvg.style.transform = 'scale(100)'
-    setTimeout(() => {
+    let timeout2 = setTimeout(() => {
       if (lvl + 1 === lvls.length) lvl = 0
       else lvl++
       player.x = lvls[lvl].player.startX
       player.y = lvls[lvl].player.startY
+      clearTimeout(timeout2)
     }, 800);
-    setTimeout(() => {
+    let timeout3 = setTimeout(() => {
       if (player.y === 100000) {
         if (lvl + 1 === lvls.length) lvl = 0
         else lvl++
         player.x = lvls[lvl].player.startX
         player.y = lvls[lvl].player.startY
       }
-
       moveStar()
       starSvg.style.transform = ''
-      setTimeout(() => {
+      let timeout4 = setTimeout(() => {
         starSvg.style.opacity = 0
+        clearTimeout(timeout4)
       }, 900);
+      clearTimeout(timeout3)
     }, 1000);
+    clearTimeout(timeout1)
   }, 10);
 
 }
@@ -480,7 +489,7 @@ const switchColor = () => {
 // HANDLERS \/
 const handler = {
   EditorKeydown: e => {
-    const keys = {
+    const key = {
       ArrowUp: 'up',
       ArrowRight: 'right',
       ArrowLeft: 'left',
@@ -493,8 +502,10 @@ const handler = {
       KeyC: 'create',
       KeyN: 'newlvl',
       Delete: 'delete',
-    }
-    const key = keys[e.code]
+      Space: 'color',
+    }[e.code] || null
+
+    if (!key) return
 
     if (key === 'edit') {
       document.addEventListener('keydown', handler.Keydown)
@@ -504,6 +515,7 @@ const handler = {
       document.removeEventListener('keydown', handler.EditorKeydown)
       canvas.style.cursor = ''
       cursor.blockId = null
+      clearInterval(moveInterval)
       moveInterval = setInterval(movePlayer, 5)
       edit = false
     }
@@ -706,7 +718,6 @@ const handler = {
     cursor.star = false
     cursor.player = false
     canvas.removeEventListener('mouseup', handler.Mouseup)
-    // localStorage.setItem('black-white-user', JSON.stringify(lvls.filter(lvl => lvl.user)))
   },
   Mousedown: e => {
     cursor.grab = true
@@ -726,19 +737,17 @@ const handler = {
     canvas.addEventListener('mouseup', handler.Mouseup)
   },
   Keydown: e => {
-    const keys = {
+    const key = {
       ArrowUp: 'up',
       ArrowRight: 'right',
       ArrowLeft: 'left',
       KeyW: 'up',
       KeyD: 'right',
       KeyA: 'left',
-      KeyS: 'color',
-      ArrowDown: 'color',
+      Space: 'color',
       KeyM: 'edit',
       KeyF: 'fullscreen',
-    }
-    const key = keys[e.code] || null
+    }[e.code] || null
     if (!key) return
     if (key === 'edit') {
       document.removeEventListener('keydown', handler.Keydown)
@@ -761,17 +770,15 @@ const handler = {
     else if (!inFall) moveDirections.push(key)
   },
   Keyup: e => {
-    const keys = {
+    const key = {
       ArrowUp: 'up',
       ArrowRight: 'right',
       ArrowLeft: 'left',
       KeyW: 'up',
       KeyD: 'right',
       KeyA: 'left',
-      KeyS: 'color',
-      ArrowDown: 'color',
-    }
-    const key = keys[e.code] || null
+      Space: 'color',
+    }[e.code] || null
     if (!key) return
     if (key === 'right' || key === 'left') {
       player.ax = 0
@@ -783,6 +790,7 @@ const handler = {
       const btnId = +e.target.dataset.id
       if (btnId === 0) {
         menu.el.classList.add('hide')
+        clearInterval(moveInterval)
         moveInterval = setInterval(movePlayer, 5)
         document.addEventListener('keydown', handler.Keydown)
         document.addEventListener('keyup', handler.Keyup)
@@ -812,7 +820,10 @@ const handler = {
         init()
         editor.init()
         editor.el.addEventListener('click', handler.ToollClick)
-        setTimeout(() => editor.el.classList.remove('hide'), 100)
+        let timeout = setTimeout(() => {
+          editor.el.classList.remove('hide')
+          clearTimeout(timeout)
+        }, 100)
         starSvg.style.left = '10000px'
         starSvg.style.bottom = '10000px'
 
@@ -830,7 +841,10 @@ const handler = {
       } if (btnId === 2) {
         menu.el.classList.add('hide')
         settings.el ? settings.el.classList.remove('hide') : settings.init()
-        setTimeout(() => settings.el.classList.remove('hide'), 100)
+        let timeout = setTimeout(() => {
+          settings.el.classList.remove('hide')
+          clearTimeout(timeout)
+        }, 100)
         settings.form.addEventListener('change', e => {
           profile[e.target.name] = e.target.value
           localStorage.setItem('black-white-settings', JSON.stringify(profile))
@@ -846,7 +860,7 @@ const handler = {
       if (btnId === 0) {
         menu.el.remove()
         init()
-        
+        clearInterval(moveInterval)
         moveInterval = setInterval(movePlayer, 5)
         invertSvg.addEventListener('touchstart', () => switchColor())
         invertSvg.style.display = 'block'
@@ -857,7 +871,10 @@ const handler = {
       if (btnId === 2) {
         menu.el.classList.add('hide')
         settings.el ? settings.el.classList.remove('hide') : settings.init()
-        setTimeout(() => settings.el.classList.remove('hide'), 100)
+        let timeout = setTimeout(() => {
+          settings.el.classList.remove('hide')
+          clearTimeout(timeout)
+        }, 100)
         settings.form.addEventListener('change', e => {
           profile[e.target.name] = e.target.value
           localStorage.setItem('black-white-settings', JSON.stringify(profile))
@@ -872,7 +889,10 @@ const handler = {
   ClickSettings: e => {
     if (e.target.classList.contains('btn-back')) {
       menu.el.classList.remove('hide')
-      setTimeout(() => settings.el.classList.add('hide'), 100);
+      let timeout = setTimeout(() => {
+        settings.el.classList.add('hide')
+        clearTimeout(timeout)
+      }, 100);
     }
   },
 }
@@ -884,7 +904,6 @@ const init = () => {
   }
   moveStar()
   render.render()
-  
   render.mode = profile.camera
 }
 
@@ -894,4 +913,3 @@ menu.init()
 // TODO: 
 // 6. add editor interface
 // 7. add new blocks like spikes or third colored blocks or blocks that have movement
-// !!! fix Space Key bug
