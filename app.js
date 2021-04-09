@@ -1,10 +1,11 @@
 import Stick from './stick.js'
+import { Data, Update } from './lvlsData.js'
 
 let 
 color = 'black',
 lvl = 0,
 edit = false,
-lvls = data,
+lvls = Update(),
 moveDirections = [],
 moveInterval = null,
 pressed = '',
@@ -40,6 +41,7 @@ screen = {
   scale: { x: 0, y: 0 }
 },
 player = {
+  vector: {x: 0, y:0, crossingBlock: null},
   sprite: new Image(),
   w: 35,
   h: 70,
@@ -65,14 +67,13 @@ menu = {
     <h2 class="menu__heading"> Black & <span>white</span> </h2>
     <ul class="menu__list">
       <li class="list__item">
-        <button class="menu__btn" data-id="0"> play </button>
+        <button class="menu__btn" data-id="0" focusable="false"> play </button>
       </li>
       <li class="list__item">
-        <button class="menu__btn" data-id="1"
-        style="text-decoration: line-through;"> editor </button>
+        <button class="menu__btn" data-id="1" focusable="false"> editor </button>
       </li>
       <li class="list__item">
-        <button class="menu__btn" data-id="2"> settings </button>
+        <button class="menu__btn" data-id="2" focusable="false"> settings </button>
       </li>
     </ul>
   `,
@@ -119,31 +120,101 @@ settings = {
 editor = {
   template: `
     <div class="toollbar">
-      <button class="toollbar__btn" data-id="0">
+      <button class="toollbar__btn" data-id="back">
+        <img src="./arrow.svg" alt="">
+      </button>
+      <button class="toollbar__btn" data-id="save">
         <img src="./floppy-disk.svg" alt="">
       </button>
-      <button class="toollbar__btn" data-id="1">
+      <button class="toollbar__btn" data-id="newlvl">
         <img src="./new.svg" alt="">
       </button>
-      <button class="toollbar__btn" data-id="2">
+
+      <input type="text" id="lvlNameInput"
+        placeholder="Unnamed"
+      >
+
+      <div class="inputs">
+        <p>X: <input value="0" type="number" data-target="x" class="targetX"></p>
+        <p>W: <input value="0" type="number" data-target="w" class="targetW"></p>
+        <p>Y: <input value="0" type="number" data-target="y" class="targetY"></p>
+        <p>H: <input value="0" type="number" data-target="h" class="targetH"></p>
+      </div>
+
+      <button class="toollbar__btn play" data-id="play_stop">
+        <img class="imgPlay" src="./play-button-arrowhead.svg" alt="">
+        <img class="imgStop" src="./stop-button.svg" alt="">
+      </button>
+      <button class="toollbar__btn" data-id="block">
         <img src="./block.svg" alt="">
       </button>
-      <button class="toollbar__btn" data-id="3">
+      <button class="toollbar__btn" data-id="color">
       <img src="./color.svg" alt="">
       </button>
-      <button class="toollbar__btn" data-id="4">
+      <button class="toollbar__btn" data-id="removeBlock">
         <img src="./delete.svg" alt="">
       </button>
     </div>
   `,
   el: null,
+  inputs: { x: null, y: null, w: null, h: null },
   init() {
-    if (this.el) return this.el.classList = 'editor'
-
+    if (this.el) {
+      this.el.querySelector('#lvlNameInput').value = lvls[lvl].name ?? ''
+      return this.el.classList = 'editor'
+    }
     this.el = document.createElement('section')
     this.el.classList = 'editor hide'
     this.el.innerHTML = this.template
     document.body.appendChild(this.el)
+    this.el.querySelector('#lvlNameInput').addEventListener('input', handler.InputChange)
+    this.el.querySelector('#lvlNameInput').value = lvls[lvl].name ?? ''
+    this.el.querySelectorAll('.inputs input').forEach(el => {
+      this.inputs[el.dataset.target] = el
+      el.addEventListener('input', handler.ParametrsInput)
+    })
+  }
+},
+levelsList = {
+  template: `
+    <div class="left">
+      <button class="back__btn">
+        <img src="./arrow.svg" alt="">
+      </button>  
+      <ul class="levels__list"></ul>
+      <button class="select__btn">select</button>
+    </div>
+  `,
+  el: null,
+  init(idList) {
+    if (this.el) this.el.classList = 'levels'
+    else {
+      this.el = document.createElement('section')
+      this.el.classList = 'levels hide'
+      this.el.innerHTML = this.template
+      document.body.appendChild(this.el)
+      this.el.addEventListener('click', handler.LevelsClick)
+    }
+
+    let userLvlsId = []
+    lvls.forEach((lvl, id) => lvl.user? userLvlsId.push(+id): '')
+
+    const list = this.el.querySelector('.levels__list')
+    list.innerHTML = `
+      <li class="list__item"><button class="levels__btn" data-id="${ lvls.length }">
+        create new lvl
+      </button></li>`
+    list.innerHTML += userLvlsId.map(id => 
+      `<li class="list__item"><button class="levels__btn" data-id="${id}">
+        ${ lvls[id].name || 'level '+id  }
+      </button>
+      <button class="levels__btn-del" data-id="${id}">
+        <img src="./remove.svg" alt="">
+      </button>
+      </li>`
+    ).join('\n')
+
+
   }
 }
 document.body.appendChild(canvas)
@@ -154,7 +225,6 @@ player.sprite.src = './player-all.png'
 canvas.width = screen.w
 canvas.height = screen.h
 
-
 const render =  {
   animCount: 0,
   mode: profile.camera,
@@ -164,13 +234,14 @@ const render =  {
     else c.fillStyle = '#333'
     c.beginPath()
     c.fillRect(0, 0, screen.w, screen.h)
-    if (edit) {
-      c.textAlign = 'left'
-      c.fillStyle = 'red'
-      c.font = '20px Roboto'
-      c.fillText('EDIT', 0, 20)
-    }
-  
+    
+    // c.font = "15px Verdana"
+    // c.strokeStyle = "red"
+    // c.strokeText('x: '+ player.vector.x, 20, 50)
+    // c.strokeText('y: '+ player.vector.y, 20, 70)
+    // c.strokeText('vx: '+ player.vx, 20, 90)
+    // c.strokeText('vy: '+ player.vy, 20, 110)
+
     c.closePath()
   },
   renderPlayer: function () {
@@ -276,17 +347,55 @@ const requestFullScreen = el => {
 const checkOrientation = () => {
   if (document.fullscreenElement) {
     fullscreenSvg.style.transform = 'scale(0) translateY(-100px)'
+    if (edit) {
+      canvas.style.marginTop = 'auto'
+      canvas.style.width = (window.innerHeight - window.innerHeight*0.1)*16/9 + 'px'
+      canvas.style.height = window.innerHeight - window.innerHeight*0.1 + 'px'
+      screen.scale = {
+        x: screen.w / canvas.offsetWidth,
+        y: screen.h / canvas.offsetHeight,
+      }
+      canvas.style.boxShadow = '0px 0px 100px 0px #474747'
+    } else {
+      canvas.style.boxShadow = ''
+      fullscreenSvg.style.transform = ''
+      canvas.style.marginTop = ''
+      canvas.style.width = ''
+      canvas.style.height = ''
+      screen.scale = {
+        x: screen.w / window.innerWidth,
+        y: screen.h / window.innerHeight,
+      }
+    }
   } else {
     if (edit) {
+      canvas.style.marginTop = 'auto'
+      canvas.style.width = (window.innerHeight - window.innerHeight*0.1)*16/9 + 'px'
+      canvas.style.height = window.innerHeight - window.innerHeight*0.1 + 'px'
+      screen.scale = {
+        x: screen.w / canvas.offsetWidth,
+        y: screen.h / canvas.offsetHeight,
+      }
+      canvas.style.boxShadow = '0px 0px 100px 0px #474747'
       fullscreenSvg.style.transform = ''
       fullscreenSvg.style.zIndex = '2341'
       fullscreenSvg.style.top = (window.innerHeight*0.1 -30) /2
       fullscreenSvg.style.right = (window.innerHeight*0.1 -30) /2
-    } else fullscreenSvg.style.transform = ''
+    } else {
+      fullscreenSvg.style.transform = ''
+      canvas.style.marginTop = ''
+      canvas.style.width = ''
+      canvas.style.height = ''
+      screen.scale = {
+        x: screen.w / window.innerWidth,
+        y: screen.h / window.innerHeight,
+      }
+      canvas.style.boxShadow = ''
+    }
   }
 
   if (window.innerWidth / window.innerHeight > 1) {// landscape
-    if (edit) return
+    if (edit || moveInterval) return document.querySelector('.rotate-phone').classList.add('hide')
     document.querySelector('.rotate-phone').classList.add('hide')
     menu.el.classList.remove('hide')
   } else {// vertical
@@ -297,16 +406,30 @@ const checkOrientation = () => {
   }
 }
 const checkCollision = (obj1, obj2) => {
-  var XColl = false;
-  var YColl = false;
+  let XColl = false;
+  let YColl = false;
 
   if ((obj1.x + obj1.w >= obj2.x) && (obj1.x <= obj2.x + obj2.w)) XColl = true;
   if ((obj1.y + obj1.h >= obj2.y) && (obj1.y <= obj2.y + obj2.h)) YColl = true;
 
-  if (XColl & YColl) {
-    return true;
-  }
+  if (XColl && YColl) return true;
   return false;
+}
+const getVector = (block, player) => {
+  let bCenter = {
+    x: (block.x + block.w)/2,
+    y: (block.y + block.h)/2,
+  }
+  let pCenter = {
+    x: (player.x + player.w)/2,
+    y: (player.y + player.h)/2,
+  }
+  
+  player.vector = {
+    x: pCenter.x - bCenter.x, 
+    y: pCenter.y - bCenter.y,
+    crossingBlock: block,
+  }
 }
 const moveStar = () => {
   let cordX = lvls[lvl].star.x / screen.scale.x
@@ -362,7 +485,7 @@ const isCrossing = () => {
   let crossing = false
   lvls[lvl].blocks[color].forEach(block => {
     let result = checkCollision(block, player)
-    if (result) crossing = result
+    if (result) crossing = result, getVector(block, player)
   })
   return crossing
 }
@@ -388,9 +511,33 @@ const movePlayer = () => {
     if (values.pressed) pressed = values.direction.x
     else pressed = ''
   }
-  if (checkCollision({ ...star, ...lvls[lvl].star }, player)) changeLvl()
-  let moveDirection = moveDirections[0] || null
+  if (checkCollision({ ...star, ...lvls[lvl].star }, player)) {
+    if (!edit) changeLvl()
+    else {    
+      clearInterval(moveInterval)
+      moveInterval = null
+      player.vx = player.vy = player.ax = 0
+      player.x = lvls[lvl].player.startX
+      player.y = lvls[lvl].player.startY
+      document.removeEventListener('keydown', handler.Keydown)
+      document.removeEventListener('keyup', handler.Keyup)
+      document.addEventListener('keydown', handler.EditorKeydown)
+      canvas.addEventListener('mousemove', handler.Mousemove)
+      document.addEventListener('mousedown', handler.Mousedown)
 
+      document.querySelector('[data-id="play_stop"]').classList.toggle('play')
+      document.querySelector('[data-id="play_stop"]').classList.toggle('stop')
+      document.querySelectorAll('.toollbar__btn').forEach(el => {
+        if (el.dataset.id !== 'play_stop') el.classList.remove('hidden')
+      })
+      document.querySelector('#lvlNameInput').classList.remove('hidden')
+      document.querySelector('.inputs').classList.remove('hidden')
+    }
+  }
+  let moveDirection = moveDirections[0] || null
+  let oldVy = player.vy
+  let oldVx = player.vx
+  
   {  // movement X
     if (player.vx === 0) player.x = Math.ceil(player.x)
 
@@ -438,10 +585,38 @@ const movePlayer = () => {
     player.vy > 0 ? player.y += player.vy : player.y -= 1
     
     if (isCrossing()) {
-      player.vy = 0
+      let block = player.vector.crossingBlock
+      if (player.x+player.w > block.x) ''
+      else player.vy = 0
+      if (player.y + player.h > block.y && player.y < block.y) player.vy = 0
       inFall = false
     } else inFall = true
     player.vy > 0 ? player.y -= player.vy : player.y += 1
+
+    while ( isCrossing() ) {
+      let distanceX = 0
+      let distanceY = 0
+      let block = player.vector.crossingBlock
+
+      if (player.vector.x < 0) {
+        distanceX = player.w - (player.vector.crossingBlock.x- player.x)
+      } else if (player.vector.x > 0) {
+        distanceX = player.w - (player.vector.crossingBlock.x + player.vector.crossingBlock.w - player.x - player.w)
+      }
+
+      if (player.vector.y < 0) {
+        distanceY = player.h + player.y - player.vector.crossingBlock.y
+      } else if (player.vector.y > 0) {
+        distanceY = player.vector.crossingBlock.y + player.vector.crossingBlock.h - player.y
+      }
+      
+
+      if (player.y > block.y && player.y + player.h < block.y + block.h ) {
+        // player inside a block vertically => move player x
+        player.x -= distanceX+1
+      } else player.y -= distanceY+1 
+
+    }
 
     if (inFall) {
       if (player.vy > -player.maxVy) player.vy += player.ay
@@ -456,7 +631,9 @@ const movePlayer = () => {
       }
     
       if (isCrossing()) {
-        while (isCrossing()) player.y += 1
+        while ( isCrossing() ) {
+          player.y -= player.vy
+        }
         player.vy = 0
         inFall = false
       } else inFall = true
@@ -519,26 +696,6 @@ const handler = {
       moveInterval = setInterval(movePlayer, 5)
       edit = false
     }
-    if (key === 'newlvl') {
-      lvls.push({
-        user: true,
-        blocks: {
-          black: [],
-          white: []
-        },
-        player: {
-          startX: 0,
-          startY: 0,
-        },
-        star: {
-          x: screen.w / 2,
-          y: screen.h / 2,
-        }
-      })
-      lvl = lvls.length - 1
-      player.x = lvls[lvl].player.startX
-      player.y = lvls[lvl].player.startY
-    }
     if (key === 'create') {
       lvls[lvl].blocks[color].push({
         x: screen.w / 2 - 50,
@@ -575,10 +732,10 @@ const handler = {
   },
   ToollClick: e => {
     if (e.target.closest('.toollbar__btn')) {
-      const btnId = +e.target.closest('.toollbar__btn').dataset.id
-      if (btnId === 0) { // save level
-        localStorage.setItem('black-white-user', JSON.stringify(lvls.filter(lvl => lvl.user)))
-      } if (btnId === 1) { // new level
+      const btnId = e.target.closest('.toollbar__btn').dataset.id
+      if (btnId === 'save') { // save level
+        localStorage.setItem('black-white-user', JSON.stringify(lvls.filter(lvl => lvl.user && (lvl.blocks['white'].length || lvl.blocks['black'].length))))
+      } if (btnId === 'newlvl') { // new level
         lvls.push({
           user: true,
           blocks: {
@@ -597,25 +754,165 @@ const handler = {
         lvl = lvls.length - 1
         player.x = lvls[lvl].player.startX
         player.y = lvls[lvl].player.startY
-      } if (btnId === 2) { // new block
+      } if (btnId === 'back') { // select level
+        lvls = Update() 
+        lvl = 0
+        levelsList.init()
+        let timeout = setTimeout(() => {
+          levelsList.el.classList.remove('hide')
+          clearTimeout(timeout)
+        }, 100)
+      } if (btnId === 'block') { // new block
         lvls[lvl].blocks[color].push({
           x: screen.w / 2 - 50,
           y: screen.h / 2 - 50,
           w: 100,
           h: 100
         }, )
-      } if (btnId === 3) { // color
+      } if (btnId === 'color') { // color
         color === 'black' ? color = 'white' : color = 'black'
         document.body.style.background = color === 'black' ? 'white' : '#333'
         starSvg.classList = color
         invertSvg.classList = color
-      } if (btnId === 4) { // remove block
+      } if (btnId === 'removeBlock') { // remove block
         lvls[lvl].blocks[color] = lvls[lvl].blocks[color].filter((block, id) => id !== cursor.blockId)
+      } if (btnId === 'play_stop') {
+        if (moveInterval) { // stop 
+          clearInterval(moveInterval)
+          moveInterval = null
+          player.vx = player.vy = player.ax = 0
+          player.x = lvls[lvl].player.startX
+          player.y = lvls[lvl].player.startY
+          document.removeEventListener('keydown', handler.Keydown)
+          document.removeEventListener('keyup', handler.Keyup)
+          document.addEventListener('keydown', handler.EditorKeydown)
+          canvas.addEventListener('mousemove', handler.Mousemove)
+          document.addEventListener('mousedown', handler.Mousedown)
+          document.querySelectorAll('.toollbar__btn').forEach(el => {
+            if (el.dataset.id !== 'play_stop') el.classList.remove('hidden')
+          })
+          document.querySelector('#lvlNameInput').classList.remove('hidden')
+          document.querySelector('.inputs').classList.remove('hidden')
+        } else { // play
+          document.querySelectorAll('.toollbar__btn').forEach(el => {
+            if (el.dataset.id !== 'play_stop') el.classList.add('hidden')
+          })
+          cursor.blockId = null
+          clearInterval(moveInterval)
+          moveInterval = setInterval(movePlayer, 5)
+          document.addEventListener('keydown', handler.Keydown)
+          document.addEventListener('keyup', handler.Keyup)
+          document.removeEventListener('keydown', handler.EditorKeydown)
+          canvas.removeEventListener('mousemove', handler.Mousemove)
+          document.removeEventListener('mousedown', handler.Mousedown)
+          document.querySelector('#lvlNameInput').classList.add('hidden')
+          document.querySelector('.inputs').classList.add('hidden')
+        }
+
+        e.target.closest('.toollbar__btn').classList.toggle('play')
+        e.target.closest('.toollbar__btn').classList.toggle('stop')
       }
     }
   },
-  Mousemove: e => {
-    cursor = { ...cursor, ...{ x: e.offsetX * screen.scale.x, y: (canvas.offsetHeight - e.offsetY) * screen.scale.y }}
+  InputChange: e => {
+    lvls[lvl].name = e.target.value || null
+  },
+  ParametrsInput: e => {   
+    let values = {
+      x: Math.round(+editor.inputs.x.value),
+      y: Math.round(+editor.inputs.y.value),
+      w: Math.round(+editor.inputs.w.value),
+      h: Math.round(+editor.inputs.h.value),
+    } 
+    lvls[lvl].blocks[color][cursor.blockId].x = values.x
+    lvls[lvl].blocks[color][cursor.blockId].y = values.y
+    lvls[lvl].blocks[color][cursor.blockId].w = values.w
+    lvls[lvl].blocks[color][cursor.blockId].h = values.h
+  },
+  LevelsClick: e => {
+    if (e.target.closest('.levels__btn')) {
+      const btn = e.target.closest('.levels__btn')
+      const btnId = +btn.dataset.id
+
+      if (document.querySelector('.levels__btn.selected')) {
+        document.querySelector('.levels__btn.selected').classList.remove('selected')
+      }
+      btn.classList.add('selected')
+    }
+    if (e.target.closest('.back__btn')) {
+      menu.el.classList.remove('hide')
+      editor.el? editor.el.classList.add('hide') :''
+      levelsList.el.classList.add('hide')
+      lvl = 0
+      edit = false
+      cursor.blockId = null
+      lvls = Update()
+      document.removeEventListener('keydown', handler.EditorKeydown)
+      canvas.removeEventListener('mousemove', handler.Mousemove)
+      document.removeEventListener('mousedown', handler.Mousedown)
+      checkOrientation()
+    }
+    if (e.target.closest('.select__btn')) {
+      // change lvl
+      let btnId = null
+      if (document.querySelector('.levels__btn.selected')) {
+        btnId = +document.querySelector('.levels__btn.selected').dataset.id
+      }
+      if (!btnId) return
+      lvl = btnId
+
+      if (lvl === lvls.length) { // create new lvl
+        lvls.push({
+          user: true,
+          blocks: {
+            black: [],
+            white: []
+          },
+          player: {
+            startX: 0,
+            startY: 0,
+          },
+          star: {
+            x: screen.w / 2,
+            y: screen.h / 2,
+          }
+        })
+      }
+
+      player.x = lvls[lvl].player.startX
+      player.y = lvls[lvl].player.startY
+      editor.init()
+      editor.el.addEventListener('click', handler.ToollClick)
+      canvas.addEventListener('mouseenter', e => {
+        cursor.grab = false
+        cursor.star = false
+        cursor.player = false
+      })
+      document.addEventListener('keydown', handler.EditorKeydown)
+      canvas.addEventListener('mousemove', handler.Mousemove)
+      document.addEventListener('mousedown', handler.Mousedown)
+      let timeout = setTimeout(() => {
+        editor.el.classList.remove('hide')
+        clearTimeout(timeout)
+      }, 100)
+      levelsList.el.classList.add('hide')
+      checkOrientation()
+    }
+    if (e.target.closest('.levels__btn-del')) {
+      const btn = e.target.closest('.levels__btn-del')
+      const btnId = +btn.dataset.id || null
+      if (!btnId) return
+
+      lvls =  lvls.filter((el, id) => btnId !== id)
+      localStorage.setItem('black-white-user', JSON.stringify(lvls.filter(lvl => lvl.user && (lvl.blocks['white'].length || lvl.blocks['black'].length))))
+      levelsList.init()
+    }
+  },
+  Mousemove: e => { 
+    cursor = { ...cursor, ...{ 
+      x: e.offsetX * screen.scale.x, 
+      y: (canvas.offsetHeight - e.offsetY) * screen.scale.y 
+    }}
     let crossedBlock = null
 
     if (!cursor.grab && !cursor.player && !cursor.star) {
@@ -653,7 +950,7 @@ const handler = {
     } else canvas.style.cursor = ''
 
 
-    let block = lvls[lvl].blocks[color][cursor.blockId]
+    let block = lvls[lvl].blocks[color][cursor.blockId] || null
     if (cursor.mode === 'grab' && cursor.grab) {
       canvas.style.cursor = 'grabbing'
       block.x += cursor.x - cursor.startX
@@ -694,24 +991,42 @@ const handler = {
       cursor.startY = cursor.y
     }
 
+    block ? lvls[lvl].blocks[color][cursor.blockId] = {
+      x: Math.round(block.x),
+      y: Math.round(block.y),
+      w: Math.round(block.w),
+      h: Math.round(block.h),
+    } : '' 
+
+    
+
+
     if (cursor.player) {
       canvas.style.cursor = 'grabbing'
       lvls[lvl].player.startX += cursor.x - cursor.startX
       lvls[lvl].player.startY += cursor.y - cursor.startY
       player.x = lvls[lvl].player.startX
       player.y = lvls[lvl].player.startY
-      cursor.startX = cursor.x
-      cursor.startY = cursor.y
+      cursor.startX = Math.round(cursor.x)
+      cursor.startY = Math.round(cursor.y)
     }
     if (cursor.star) {
       canvas.style.cursor = 'grabbing'
       lvls[lvl].star.x += cursor.x - cursor.startX
       lvls[lvl].star.y += cursor.y - cursor.startY
-      cursor.startX = cursor.x
-      cursor.startY = cursor.y
+      cursor.startX = Math.round(cursor.x)
+      cursor.startY = Math.round(cursor.y)
     }
 
     if (!cursor.grab) cursor.mode = canvas.style.cursor
+
+    if (cursor.blockId !== null && cursor.blockId>=0) {
+      let block = lvls[lvl].blocks[color][cursor.blockId]
+      editor.inputs.x.value = block.x? block.x : 0
+      editor.inputs.y.value = block.y? block.y : 0
+      editor.inputs.w.value = block.w? block.w : 0
+      editor.inputs.h.value = block.h? block.h : 0
+    }
   },
   Mouseup: e => {
     cursor.grab = false
@@ -756,6 +1071,7 @@ const handler = {
       canvas.addEventListener('mousemove', handler.Mousemove)
       document.addEventListener('mousedown', handler.Mousedown)
       clearInterval(moveInterval)
+      moveInterval = null
       edit = true
       return
     }
@@ -796,47 +1112,24 @@ const handler = {
         document.addEventListener('keyup', handler.Keyup)
         init()
       } if (btnId === 1) {
-        lvls.push({
-          user: true,
-          blocks: {
-            black: [],
-            white: []
-          },
-          player: {
-            startX: 0,
-            startY: 0,
-          },
-          star: {
-            x: screen.w / 2,
-            y: screen.h / 2,
-          }
-        })
-        lvl = lvls.length - 1
-        player.x = lvls[lvl].player.startX
-        player.y = lvls[lvl].player.startY
         menu.el.classList.add('hide')
         profile.camera = 'static'
         render.mode = 'static'
-        init()
-        editor.init()
-        editor.el.addEventListener('click', handler.ToollClick)
+        canvas.style.marginTop = 'auto'
+        canvas.style.width = (window.innerHeight - window.innerHeight*0.1)*16/9 + 'px'
+        canvas.style.height = window.innerHeight - window.innerHeight*0.1 + 'px'
+        levelsList.init()
         let timeout = setTimeout(() => {
-          editor.el.classList.remove('hide')
+          levelsList.el.classList.remove('hide')
           clearTimeout(timeout)
         }, 100)
+        let timeout1 = setTimeout(() => {
+          init()
+          clearTimeout(timeout1)
+        }, 1000)
         starSvg.style.left = '10000px'
         starSvg.style.bottom = '10000px'
-
-        canvas.addEventListener('mouseenter', e => {
-          cursor.grab = false
-          cursor.star = false
-          cursor.player = false
-        })
-        document.addEventListener('keydown', handler.EditorKeydown)
-        canvas.addEventListener('mousemove', handler.Mousemove)
-        document.addEventListener('mousedown', handler.Mousedown)
         edit = true
-        
         checkOrientation()
       } if (btnId === 2) {
         menu.el.classList.add('hide')
@@ -867,8 +1160,9 @@ const handler = {
         stick.init()
         stick.wrapper.style.display = 'block'
         stick.enabled = true
-      } 
-      if (btnId === 2) {
+      } if (btnId === 1) {
+
+      } if (btnId === 2) {
         menu.el.classList.add('hide')
         settings.el ? settings.el.classList.remove('hide') : settings.init()
         let timeout = setTimeout(() => {
@@ -911,5 +1205,4 @@ menu.init()
 
 
 // TODO: 
-// 6. add editor interface
 // 7. add new blocks like spikes or third colored blocks or blocks that have movement
