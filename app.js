@@ -247,9 +247,10 @@ const render =  {
   renderPlayer: function () {
     let playerY = screen.h - player.y - player.h
   
-    if (moveDirections[0] === 'left' || moveDirections[0] === 'right') {
+    // if (moveDirections[0] === 'left' || moveDirections[0] === 'right') {
+    if (player.vx !== 0) {
       this.animCount < 4 ? this.animCount++ : this.animCount = 1
-      if (player.vy) this.animCount = 1
+      if (inFall) this.animCount = 1
     } else this.animCount = 0
     let x = this.animCount
   
@@ -998,9 +999,6 @@ const handler = {
       h: Math.round(block.h),
     } : '' 
 
-    
-
-
     if (cursor.player) {
       canvas.style.cursor = 'grabbing'
       lvls[lvl].player.startX += cursor.x - cursor.startX
@@ -1205,4 +1203,6 @@ menu.init()
 
 
 // TODO: 
+
+// level preview in level list
 // 7. add new blocks like spikes or third colored blocks or blocks that have movement
