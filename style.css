@@ -289,6 +289,17 @@ select {
   z-index: 1451;
   background: #fff;
   transition: 0.5s ease-in-out;
+  display: flex;
+  align-items: center;
+}
+.right {
+  width: 70%;
+  box-shadow: 0px 0px 100px 0px #474747;
+}
+#levelPreview {
+  width: 70vw;
+  height: calc(70vw / 16 * 9);
+
 }
 .levels.hide {
   transform: translateY(-100%);
@@ -296,11 +307,14 @@ select {
 }
 .left {
   height: 100%;
+  width: 30%;
+  background: #fff;
+  z-index: 2;
 }
 .levels__list {
   overflow-y: scroll;
   height: calc(100% - 80px);
-  width: 30%;
+  width: 100%;
   margin: 0;
   padding: 0;
   padding-left: 30px;

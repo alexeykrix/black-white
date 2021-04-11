@@ -1,5 +1,5 @@
 import Stick from './stick.js'
-import { Data, Update } from './lvlsData.js'
+import { Update } from './lvlsData.js'
 
 let 
 color = 'black',
@@ -34,7 +34,7 @@ starSvg = document.querySelector('#starSvg'),
 invertSvg = document.querySelector('#invertSvg'),
 fullscreenSvg = document.querySelector('#fullscreenSvg'),
 canvas = document.createElement('canvas'),
-c = canvas.getContext('2d'),
+context = canvas.getContext('2d'),
 screen = {
   w: 1280,
   h: 720,
@@ -184,8 +184,20 @@ levelsList = {
       <ul class="levels__list"></ul>
       <button class="select__btn">select</button>
     </div>
+    <div class="right">
+      <canvas id="levelPreview">
+    </div>
   `,
   el: null,
+  render() {
+    color = 'black'
+    const context = this.levelPreview.getContext('2d')
+    render.clearCanvas(context)
+    render.renderTransparentBlocks(context)
+    render.renderPlayer(context)
+    render.renderCollisionBlocks(context)
+    render.renderStar(context)
+  },
   init(idList) {
     if (this.el) this.el.classList = 'levels'
     else {
@@ -194,6 +206,9 @@ levelsList = {
       this.el.innerHTML = this.template
       document.body.appendChild(this.el)
       this.el.addEventListener('click', handler.LevelsClick)
+      this.levelPreview = this.el.querySelector('#levelPreview')
+      this.levelPreview.width = 1280
+      this.levelPreview.height = 720
     }
 
     let userLvlsId = []
@@ -213,8 +228,6 @@ levelsList = {
       </button>
       </li>`
     ).join('\n')
-
-
   }
 }
 document.body.appendChild(canvas)
@@ -225,16 +238,18 @@ player.sprite.src = './player-all.png'
 canvas.width = screen.w
 canvas.height = screen.h
 
-const render =  {
+const 
+render =  {
   animCount: 0,
   mode: profile.camera,
 
-  clearCanvas: function () {
+  clearCanvas: function (c) {
     if (color === 'black') c.fillStyle = '#fff'
     else c.fillStyle = '#333'
     c.beginPath()
     c.fillRect(0, 0, screen.w, screen.h)
     
+    // for debug \/
     // c.font = "15px Verdana"
     // c.strokeStyle = "red"
     // c.strokeText('x: '+ player.vector.x, 20, 50)
@@ -244,11 +259,9 @@ const render =  {
 
     c.closePath()
   },
-  renderPlayer: function () {
+  renderPlayer: function (c) {
     let playerY = screen.h - player.y - player.h
-  
-    // if (moveDirections[0] === 'left' || moveDirections[0] === 'right') {
-    if (player.vx !== 0) {
+      if (player.vx !== 0) {
       this.animCount < 4 ? this.animCount++ : this.animCount = 1
       if (inFall) this.animCount = 1
     } else this.animCount = 0
@@ -261,7 +274,7 @@ const render =  {
       c.drawImage(player.sprite, 35 * x, 70 * y, 35, 70, player.x, playerY+1, 35, 70)
     } else c.drawImage(player.sprite, 35 * x, 70 * y, 35, 70, screen.w/2, screen.h/2+1, 35, 70)
   },
-  renderTransparentBlocks: function () {
+  renderTransparentBlocks: function (c) {
     let playerY = screen.h - player.y - player.h
     if (color === 'black') {
       lvls[lvl].blocks['white'].forEach(block => {
@@ -283,7 +296,7 @@ const render =  {
       })
     }
   },
-  renderCollisionBlocks: function () {
+  renderCollisionBlocks: function (c) {
     let playerY = screen.h - player.y - player.h
     if (color === 'black') {
       lvls[lvl].blocks['black'].forEach((block, id) => {
@@ -307,14 +320,14 @@ const render =  {
       })
     }
   },
-  renderStar: function () {
+  renderStar: function (c) {
     let playerY = screen.h - player.y - player.h
     if (this.mode === 'static') {
       c.drawImage(star.sprite[color], lvls[lvl].star.x, screen.h - lvls[lvl].star.y - star.h, star.w, star.h)
     } else c.drawImage(star.sprite[color], lvls[lvl].star.x + screen.w/2 - player.x, screen.h*1.5 - playerY - lvls[lvl].star.y - star.h, star.w, star.h)
   
   },
-  render: function () {
+  render: function (c) {
     if (profile.camera === 'fixed') {
       canvas.width = screen.w = window.innerWidth * window.devicePixelRatio
       canvas.height = screen.h = window.innerHeight * window.devicePixelRatio
@@ -322,16 +335,16 @@ const render =  {
       canvas.style.height = '100%'
     }
 
-    this.clearCanvas()
-    this.renderTransparentBlocks()
-    this.renderPlayer()
-    this.renderCollisionBlocks()
-    this.renderStar()
+    this.clearCanvas(c)
+    this.renderTransparentBlocks(c)
+    this.renderPlayer(c)
+    this.renderCollisionBlocks(c)
+    this.renderStar(c)
 
-    window.requestAnimationFrame(() => this.render())
+    window.requestAnimationFrame(() => this.render(c))
   },
-}
-const requestFullScreen = el => {
+},
+requestFullScreen = el => {
   let requestMethod = el.requestFullScreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullScreen;
   if (requestMethod) requestMethod.call(el);
   
@@ -344,8 +357,8 @@ const requestFullScreen = el => {
     stick.enabled ? stick.init() :''
     clearTimeout(timeout)
   }, 1000)
-}
-const checkOrientation = () => {
+},
+checkOrientation = () => {
   if (document.fullscreenElement) {
     fullscreenSvg.style.transform = 'scale(0) translateY(-100px)'
     if (edit) {
@@ -405,8 +418,8 @@ const checkOrientation = () => {
       menu.el.classList.add('hide')
     } else settings.el.classList.add('hide'), menu.el.classList.add('hide')
   }
-}
-const checkCollision = (obj1, obj2) => {
+},
+checkCollision = (obj1, obj2) => {
   let XColl = false;
   let YColl = false;
 
@@ -415,8 +428,8 @@ const checkCollision = (obj1, obj2) => {
 
   if (XColl && YColl) return true;
   return false;
-}
-const getVector = (block, player) => {
+},
+getVector = (block, player) => {
   let bCenter = {
     x: (block.x + block.w)/2,
     y: (block.y + block.h)/2,
@@ -431,8 +444,8 @@ const getVector = (block, player) => {
     y: pCenter.y - bCenter.y,
     crossingBlock: block,
   }
-}
-const moveStar = () => {
+},
+moveStar = () => {
   let cordX = lvls[lvl].star.x / screen.scale.x
   let cordY = lvls[lvl].star.y / screen.scale.y
 
@@ -444,8 +457,8 @@ const moveStar = () => {
   starSvg.style.left = cordX + 'px'
   starSvg.style.bottom = cordY + 'px'
   starSvg.style.width = star.w / screen.scale.x
-}
-const changeLvl = () => {
+},
+changeLvl = () => {
   player.x = 0
   player.y = 100000
 
@@ -479,18 +492,19 @@ const changeLvl = () => {
     clearTimeout(timeout1)
   }, 10);
 
-}
-const jump = () => player.vy = 5 * (jumpCoef> 0.5 ? jumpCoef: 0.5)
-
-const isCrossing = () => {
+},
+jump = () => { 
+  player.vy = 5 * (jumpCoef> 0.5 ? jumpCoef: 0.5)
+},
+isCrossing = () => {
   let crossing = false
   lvls[lvl].blocks[color].forEach(block => {
     let result = checkCollision(block, player)
     if (result) crossing = result, getVector(block, player)
   })
   return crossing
-}
-const movePlayer = () => {
+},
+movePlayer = () => {
   if (document.fullscreenElement) {
     fullscreenSvg.style.transform = 'scale(0) translateY(-100px)'
   } else fullscreenSvg.style.transform = ''
@@ -647,8 +661,8 @@ const movePlayer = () => {
 
   moveDirection? moveDirections.shift() :''
   if (pressed && moveDirection) moveDirections.push(pressed)
-}
-const switchColor = () => {
+},
+switchColor = () => {
   color === 'black' ? color = 'white' : color = 'black'
 
     if (isCrossing()) {
@@ -662,6 +676,15 @@ const switchColor = () => {
     fullscreenSvg.classList = color
     stick.stick.color = color === 'black'? '#474747': '#ebebeb'
     stick.upadteStyles()
+},
+init = () => {
+  screen.scale = {
+    x: screen.w / window.innerWidth,
+    y: screen.h / window.innerHeight,
+  }
+  moveStar()
+  render.render(context)
+  render.mode = profile.camera
 }
 
 // HANDLERS \/
@@ -834,7 +857,7 @@ const handler = {
     if (e.target.closest('.levels__btn')) {
       const btn = e.target.closest('.levels__btn')
       const btnId = +btn.dataset.id
-
+      if (btnId && btnId !== lvls.length) lvl = btnId, levelsList.render()
       if (document.querySelector('.levels__btn.selected')) {
         document.querySelector('.levels__btn.selected').classList.remove('selected')
       }
@@ -1189,20 +1212,9 @@ const handler = {
   },
 }
 
-const init = () => {
-  screen.scale = {
-    x: screen.w / window.innerWidth,
-    y: screen.h / window.innerHeight,
-  }
-  moveStar()
-  render.render()
-  render.mode = profile.camera
-}
-
+// START \/
 menu.init()
 
 
 // TODO: 
-
-// level preview in level list
 // 7. add new blocks like spikes or third colored blocks or blocks that have movement
