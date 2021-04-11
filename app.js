@@ -248,6 +248,12 @@ render =  {
     else c.fillStyle = '#333'
     c.beginPath()
     c.fillRect(0, 0, screen.w, screen.h)
+    c.font = "45px Nunito"
+    if (color === 'black') c.fillStyle = '#333'
+    else c.fillStyle = '#fff'
+    let text = lvl+1 < 10? '0'+(lvl+1) : lvl+1
+    if (lvls[lvl].name) text = lvls[lvl].name 
+    c.fillText(text, 0, 45)
     
     // for debug \/
     // c.font = "15px Verdana"
@@ -854,6 +860,7 @@ const handler = {
     }
   },
   InputChange: e => {
+    e.target.value = e.target.value.slice(0, 15)
     lvls[lvl].name = e.target.value || null
   },
   ParametrsInput: e => {   
@@ -1096,24 +1103,8 @@ const handler = {
       KeyD: 'right',
       KeyA: 'left',
       Space: 'color',
-      KeyM: 'edit',
-      KeyF: 'fullscreen',
     }[e.code] || null
     if (!key) return
-    if (key === 'edit') {
-      document.removeEventListener('keydown', handler.Keydown)
-      document.removeEventListener('keyup', handler.Keyup)
-      document.addEventListener('keydown', handler.EditorKeydown)
-      canvas.addEventListener('mousemove', handler.Mousemove)
-      document.addEventListener('mousedown', handler.Mousedown)
-      clearInterval(moveInterval)
-      moveInterval = null
-      edit = true
-      return
-    }
-
-    if (key == 'fullscreen') return requestFullScreen(document.documentElement)
-
     if (!key || pressed === key) return
 
     if (key === 'color') return switchColor()
