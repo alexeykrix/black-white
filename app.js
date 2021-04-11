@@ -261,7 +261,7 @@ render =  {
   },
   renderPlayer: function (c) {
     let playerY = screen.h - player.y - player.h
-      if (player.vx !== 0) {
+    if (player.vx !== 0 || player.ax !== 0) {
       this.animCount < 4 ? this.animCount++ : this.animCount = 1
       if (inFall) this.animCount = 1
     } else this.animCount = 0
