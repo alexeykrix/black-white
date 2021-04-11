@@ -590,9 +590,24 @@ movePlayer = () => {
         else player.vx = player.maxVx
       }
     }
+
+    
     
     player.x += player.vx
-    if (isCrossing() || player.x + player.w > 1280) player.x -= player.vx
+    if (isCrossing() || player.x < 0||  player.x + player.w > 1280) player.x -= player.vx
+    while ( isCrossing() ) {
+      let distanceX = 0
+      let distanceY = 0
+      let block = player.vector.crossingBlock
+
+      if (player.vector.x < 0) {
+        distanceX = player.w - (player.vector.crossingBlock.x- player.x)
+      } else if (player.vector.x > 0) {
+        distanceX = player.w - (player.vector.crossingBlock.x + player.vector.crossingBlock.w - player.x - player.w)
+      }
+
+      player.x -= distanceX+1
+    }
   }
 
   {  // movement Y
