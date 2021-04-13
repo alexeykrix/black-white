@@ -241,7 +241,7 @@ select {
   font-family: Nunito, sans-serif;
   font-size: 20px;
   border-radius: 10px;
-  padding-top: 7px;
+  padding-top: 1.2vh;
   transition: 0.5s ease-in-out;
 }
 
@@ -271,7 +271,7 @@ select {
 #lvlNameInput.hidden {
   margin-top: -100%;
 }
-.toollbar__btn:nth-child(6) {
+.toollbar__btn:nth-child(5) {
   margin-left: auto;
 }
 .toollbar__btn:last-child {

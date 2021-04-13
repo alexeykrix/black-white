@@ -3,6 +3,7 @@ import { Update } from './lvlsData.js'
 
 let 
 color = 'black',
+touch = false,
 lvl = 0,
 edit = false,
 lvls = Update(),
@@ -19,11 +20,11 @@ cursor = {
   startY: 0,
   w: 1,
   h: 1,
-  grab: false,
-  player: false,
-  star: false,
-  mode: null,
+  hold: false,
+  target: '',
+  style: '',
   blockId: null,
+  crossedEl: null,
 },
 profile = JSON.parse(localStorage.getItem('black-white-settings')) || {
   camera: 'static',
@@ -125,9 +126,6 @@ editor = {
       </button>
       <button class="toollbar__btn" data-id="save">
         <img src="./floppy-disk.svg" alt="">
-      </button>
-      <button class="toollbar__btn" data-id="newlvl">
-        <img src="./new.svg" alt="">
       </button>
 
       <input type="text" id="lvlNameInput"
@@ -543,11 +541,19 @@ movePlayer = () => {
       document.removeEventListener('keydown', handler.Keydown)
       document.removeEventListener('keyup', handler.Keyup)
       document.addEventListener('keydown', handler.EditorKeydown)
-      canvas.addEventListener('mousemove', handler.Mousemove)
-      document.addEventListener('mousedown', handler.Mousedown)
 
-      document.querySelector('[data-id="play_stop"]').classList.toggle('play')
-      document.querySelector('[data-id="play_stop"]').classList.toggle('stop')
+      if (touch) {
+        canvas.addEventListener('touchmove', handler.Mousemove)
+        canvas.addEventListener('touchstart', handler.Mousedown)
+        clearInterval(moveInterval)
+        moveInterval = null
+        invertSvg.style.display = 'none'
+        stick.wrapper.style.display = 'none'
+      } else {
+        canvas.addEventListener('mousemove', handler.Mousemove)
+        canvas.addEventListener('mousedown', handler.Mousedown)
+      }
+
       document.querySelectorAll('.toollbar__btn').forEach(el => {
         if (el.dataset.id !== 'play_stop') el.classList.remove('hidden')
       })
@@ -698,6 +704,36 @@ switchColor = () => {
     stick.stick.color = color === 'black'? '#474747': '#ebebeb'
     stick.upadteStyles()
 },
+setCursor = () => {
+  const cursorName = {
+    grab: 'grab',
+    grabbing: 'grabbing',
+    vertical: 'ns-resize',
+    horizontal: 'ew-resize',
+  }[cursor.style] || ''
+  canvas.style.cursor = cursorName
+},
+checkCursorStyle = () => {
+  cursor.style = ''
+  if (checkCollision({...star, ...lvls[lvl].star}, cursor)) {
+    cursor.style = cursor.hold? 'grabbing' : 'grab'
+  } else if (checkCollision(player, cursor)) {
+    cursor.style = cursor.hold? 'grabbing' : 'grab'
+  } else lvls[lvl].blocks[color].forEach((block, id) => {
+    if (checkCollision(block, cursor)) {
+      cursor.style = cursor.hold? 'grabbing' : 'grab'
+      if (cursor.y - block.y - block.h > -5 
+      || cursor.y - block.y < 5 ) {
+        cursor.style = 'vertical'
+      } 
+      else if (cursor.x - block.x - block.w > -5
+      || cursor.x - block.x < 5 ) {
+        cursor.style = 'horizontal'
+      }
+    }
+  })
+  setCursor()
+},
 init = () => {
   screen.scale = {
     x: screen.w / window.innerWidth,
@@ -707,6 +743,7 @@ init = () => {
   render.render(context)
   render.mode = profile.camera
 }
+
 
 // HANDLERS \/
 const handler = {
@@ -732,8 +769,15 @@ const handler = {
     if (key === 'edit') {
       document.addEventListener('keydown', handler.Keydown)
       document.addEventListener('keyup', handler.Keyup)
-      canvas.removeEventListener('mousemove', handler.Mousemove)
-      document.removeEventListener('mousedown', handler.Mousedown)
+
+      if (touch) {
+        canvas.removeEventListener('touchmove', handler.Mousemove)
+        canvas.removeEventListener('touchstart', handler.Mousedown)
+      } else {
+        canvas.removeEventListener('mousemove', handler.Mousemove)
+        canvas.removeEventListener('mousedown', handler.Mousedown)
+      }
+
       document.removeEventListener('keydown', handler.EditorKeydown)
       canvas.style.cursor = ''
       cursor.blockId = null
@@ -780,25 +824,6 @@ const handler = {
       const btnId = e.target.closest('.toollbar__btn').dataset.id
       if (btnId === 'save') { // save level
         localStorage.setItem('black-white-user', JSON.stringify(lvls.filter(lvl => lvl.user && (lvl.blocks['white'].length || lvl.blocks['black'].length))))
-      } if (btnId === 'newlvl') { // new level
-        lvls.push({
-          user: true,
-          blocks: {
-            black: [],
-            white: []
-          },
-          player: {
-            startX: 0,
-            startY: 0,
-          },
-          star: {
-            x: screen.w / 2,
-            y: screen.h / 2,
-          }
-        })
-        lvl = lvls.length - 1
-        player.x = lvls[lvl].player.startX
-        player.y = lvls[lvl].player.startY
       } if (btnId === 'back') { // select level
         lvls = Update() 
         lvl = 0
@@ -831,8 +856,19 @@ const handler = {
           document.removeEventListener('keydown', handler.Keydown)
           document.removeEventListener('keyup', handler.Keyup)
           document.addEventListener('keydown', handler.EditorKeydown)
-          canvas.addEventListener('mousemove', handler.Mousemove)
-          document.addEventListener('mousedown', handler.Mousedown)
+
+          if (touch) {
+            canvas.addEventListener('touchmove', handler.Mousemove)
+            canvas.addEventListener('touchstart', handler.Mousedown)
+            clearInterval(moveInterval)
+            moveInterval = null
+            invertSvg.style.display = 'none'
+            stick.wrapper.style.display = 'none'
+          } else {
+            canvas.addEventListener('mousemove', handler.Mousemove)
+            canvas.addEventListener('mousedown', handler.Mousedown)
+          }
+
           document.querySelectorAll('.toollbar__btn').forEach(el => {
             if (el.dataset.id !== 'play_stop') el.classList.remove('hidden')
           })
@@ -848,8 +884,23 @@ const handler = {
           document.addEventListener('keydown', handler.Keydown)
           document.addEventListener('keyup', handler.Keyup)
           document.removeEventListener('keydown', handler.EditorKeydown)
-          canvas.removeEventListener('mousemove', handler.Mousemove)
-          document.removeEventListener('mousedown', handler.Mousedown)
+          if (touch) {
+            canvas.removeEventListener('touchmove', handler.Mousemove)
+            canvas.removeEventListener('touchstart', handler.Mousedown)
+            init()
+            clearInterval(moveInterval)
+            moveInterval = setInterval(movePlayer, 5)
+            invertSvg.style.display = 'block'
+            stick.wrapper.style.display = 'block'
+            if (!stick.enabled) {
+              invertSvg.addEventListener('touchstart', () => switchColor())
+              stick.init()
+              stick.enabled = true
+            } 
+          } else {
+            canvas.removeEventListener('mousemove', handler.Mousemove)
+            canvas.removeEventListener('mousedown', handler.Mousedown)
+          }
           document.querySelector('#lvlNameInput').classList.add('hidden')
           document.querySelector('.inputs').classList.add('hidden')
         }
@@ -894,8 +945,15 @@ const handler = {
       cursor.blockId = null
       lvls = Update()
       document.removeEventListener('keydown', handler.EditorKeydown)
-      canvas.removeEventListener('mousemove', handler.Mousemove)
-      document.removeEventListener('mousedown', handler.Mousedown)
+
+      if (touch) {
+        canvas.removeEventListener('touchmove', handler.Mousemove)
+        canvas.removeEventListener('touchstart', handler.Mousedown)
+      } else {
+        canvas.removeEventListener('mousemove', handler.Mousemove)
+        canvas.removeEventListener('mousedown', handler.Mousedown)
+      }
+
       checkOrientation()
     }
     if (e.target.closest('.select__btn')) {
@@ -929,14 +987,22 @@ const handler = {
       player.y = lvls[lvl].player.startY
       editor.init()
       editor.el.addEventListener('click', handler.ToollClick)
-      canvas.addEventListener('mouseenter', e => {
-        cursor.grab = false
-        cursor.star = false
-        cursor.player = false
-      })
       document.addEventListener('keydown', handler.EditorKeydown)
-      canvas.addEventListener('mousemove', handler.Mousemove)
-      document.addEventListener('mousedown', handler.Mousedown)
+      
+      if (touch) {
+        canvas.addEventListener('touchmove', handler.Mousemove)
+        canvas.addEventListener('touchstart', handler.Mousedown)
+      } else {
+        canvas.addEventListener('mousemove', handler.Mousemove)
+        canvas.addEventListener('mousedown', handler.Mousedown)
+        canvas.addEventListener('mouseenter', e => {
+          cursor.hold = false
+          cursor.target = ''
+          cursor.crossedEl = null
+          checkCursorStyle()
+        })
+      }
+
       let timeout = setTimeout(() => {
         editor.el.classList.remove('hide')
         clearTimeout(timeout)
@@ -954,114 +1020,78 @@ const handler = {
       levelsList.init()
     }
   },
-  Mousemove: e => { 
-    cursor = { ...cursor, ...{ 
-      x: e.offsetX * screen.scale.x, 
-      y: (canvas.offsetHeight - e.offsetY) * screen.scale.y 
-    }}
-    let crossedBlock = null
-
-    if (!cursor.grab && !cursor.player && !cursor.star) {
-      if (checkCollision({
-          ...star,
-          ...lvls[lvl].star
-        }, cursor)) {
-        crossedBlock = star
-        cursor.mode = 'star'
-        cursor.blockId = null
-      } else if (checkCollision(player, cursor)) {
-        crossedBlock = player
-        cursor.mode = 'star'
-        cursor.blockId = null
-      } else lvls[lvl].blocks[color].forEach((block, id) => {
-        if (checkCollision(block, cursor)) {
-          crossedBlock = block
-          cursor.blockId = id
-        }
-      })
-    }
-
-    if (crossedBlock && cursor.mode !== 'star') {
-      canvas.style.cursor = 'grab'
-      if (cursor.y - (crossedBlock.y + crossedBlock.h) > -5 ||
-        cursor.y - crossedBlock.y < 5) {
-        canvas.style.cursor = 'ns-resize'
+  Mousemove: evt => { 
+    let e = evt.touches? evt.touches[0] : evt
+    
+    { // set cords
+      if (touch) {
+        cursor.x = (e.clientX - canvas.offsetLeft) * screen.scale.x
+        cursor.y = (canvas.offsetHeight - (e.clientY - canvas.offsetTop)) * screen.scale.y
+      } else {
+        cursor.x = e.offsetX * screen.scale.x
+        cursor.y = (canvas.offsetHeight - e.offsetY) * screen.scale.y  
       }
-      if (cursor.x - (crossedBlock.x + crossedBlock.w) > -5 ||
-        cursor.x - crossedBlock.x < 5) {
-        canvas.style.cursor = 'ew-resize'
+      cursor.x = Math.round(cursor.x)
+      cursor.y = Math.round(cursor.y)
+    }
+    
+    if (!cursor.hold) return checkCursorStyle() 
+    
+    { // interaction
+      let block = lvls[lvl].blocks[color][cursor.blockId] || null
+      if (cursor.target === 'player') {
+        lvls[lvl].player.startX += cursor.x - cursor.startX
+        lvls[lvl].player.startY += cursor.y - cursor.startY
+        player.x = lvls[lvl].player.startX
+        player.y = lvls[lvl].player.startY
+        cursor.startX = Math.round(cursor.x)
+        cursor.startY = Math.round(cursor.y)
       }
-    } else if (cursor.mode === 'star') {
-      canvas.style.cursor = 'grab'
-    } else canvas.style.cursor = ''
+      if (cursor.target === 'star') {
+        lvls[lvl].star.x += cursor.x - cursor.startX
+        lvls[lvl].star.y += cursor.y - cursor.startY
+        cursor.startX = Math.round(cursor.x)
+        cursor.startY = Math.round(cursor.y)
+      }
+      if (cursor.style === 'horizontal') {
+        if (cursor.x - block.x < block.w / 2) { // left corner
+          let delta = cursor.x - cursor.startX
+          if (delta > 0) {
+            block.w -= cursor.x - cursor.startX
+            block.x += cursor.x - cursor.startX
+          } else {
+            block.w -= cursor.x - cursor.startX
+            block.x += cursor.x - cursor.startX
+          }
+        } else block.w += cursor.x - cursor.startX // right corner
 
+        if (block.w < 5) block.w = 5
+        cursor.startX = cursor.x
+        cursor.startY = cursor.y
+      }
+      else if (cursor.style === 'vertical') {
+        if (cursor.y - block.y < block.h / 2) { // bottom
+          let delta = cursor.y - cursor.startY
+          if (delta > 0) {
+            block.h -= cursor.y - cursor.startY
+            block.y += cursor.y - cursor.startY
+          } else {
+            block.h -= cursor.y - cursor.startY
+            block.y += cursor.y - cursor.startY
+          }
+        } else block.h += cursor.y - cursor.startY // top
 
-    let block = lvls[lvl].blocks[color][cursor.blockId] || null
-    if (cursor.mode === 'grab' && cursor.grab) {
-      canvas.style.cursor = 'grabbing'
-      block.x += cursor.x - cursor.startX
-      block.y += cursor.y - cursor.startY
-      cursor.startX = cursor.x
-      cursor.startY = cursor.y
+        if (block.h < 5) block.h = 5
+        cursor.startX = cursor.y
+        cursor.startY = cursor.y
+      } 
+      else if (cursor.target === 'block') {
+        block.x += cursor.x - cursor.startX
+        block.y += cursor.y - cursor.startY
+        cursor.startX = cursor.x
+        cursor.startY = cursor.y
+      } 
     }
-    if (cursor.mode === 'ew-resize' && cursor.grab) {
-      if (cursor.x - block.x < block.w / 2) { // left corner
-        let delta = cursor.x - cursor.startX
-        if (delta > 0) {
-          block.w -= cursor.x - cursor.startX
-          block.x += cursor.x - cursor.startX
-        } else {
-          block.w -= cursor.x - cursor.startX
-          block.x += cursor.x - cursor.startX
-        }
-      } else block.w += cursor.x - cursor.startX
-
-      if (block.w < 5) block.w = 5
-      cursor.startX = cursor.x
-      cursor.startY = cursor.y
-    }
-    if (cursor.mode === 'ns-resize' && cursor.grab) {
-      if (cursor.y - block.y < block.h / 2) { // left corner
-        let delta = cursor.y - cursor.startY
-        if (delta > 0) {
-          block.h -= cursor.y - cursor.startY
-          block.y += cursor.y - cursor.startY
-        } else {
-          block.h -= cursor.y - cursor.startY
-          block.y += cursor.y - cursor.startY
-        }
-      } else block.h += cursor.y - cursor.startY
-
-      if (block.h < 5) block.h = 5
-      cursor.startX = cursor.y
-      cursor.startY = cursor.y
-    }
-
-    block ? lvls[lvl].blocks[color][cursor.blockId] = {
-      x: Math.round(block.x),
-      y: Math.round(block.y),
-      w: Math.round(block.w),
-      h: Math.round(block.h),
-    } : '' 
-
-    if (cursor.player) {
-      canvas.style.cursor = 'grabbing'
-      lvls[lvl].player.startX += cursor.x - cursor.startX
-      lvls[lvl].player.startY += cursor.y - cursor.startY
-      player.x = lvls[lvl].player.startX
-      player.y = lvls[lvl].player.startY
-      cursor.startX = Math.round(cursor.x)
-      cursor.startY = Math.round(cursor.y)
-    }
-    if (cursor.star) {
-      canvas.style.cursor = 'grabbing'
-      lvls[lvl].star.x += cursor.x - cursor.startX
-      lvls[lvl].star.y += cursor.y - cursor.startY
-      cursor.startX = Math.round(cursor.x)
-      cursor.startY = Math.round(cursor.y)
-    }
-
-    if (!cursor.grab) cursor.mode = canvas.style.cursor
 
     if (cursor.blockId !== null && cursor.blockId>=0) {
       let block = lvls[lvl].blocks[color][cursor.blockId]
@@ -1071,28 +1101,57 @@ const handler = {
       editor.inputs.h.value = block.h? block.h : 0
     }
   },
-  Mouseup: e => {
-    cursor.grab = false
-    cursor.star = false
-    cursor.player = false
-    canvas.removeEventListener('mouseup', handler.Mouseup)
-  },
-  Mousedown: e => {
-    cursor.grab = true
-    if (checkCollision({ ...star, ...lvls[lvl].star }, cursor)) {
-      cursor.star = true
-      cursor.mode = 'star'
-      cursor.blockId = null
-      cursor.grab = false
-    } else if (checkCollision(player, cursor)) {
-      cursor.player = true
-      cursor.mode = 'star'
-      cursor.blockId = null
-      cursor.grab = false
+  Mouseup: evt => {
+    const e = evt.touches? evt.changedTouches[0] : evt
+
+    cursor.hold = false
+    cursor.target = ''
+    cursor.crossedEl = null
+    checkCursorStyle()
+    cursor.x = cursor.y = cursor.startX = cursor.startY = null
+
+    { // remove handlers
+      if (touch) canvas.removeEventListener('touchend', handler.Mouseup)
+      else canvas.removeEventListener('mouseup', handler.Mouseup)
     }
-    cursor.startX = e.offsetX * screen.scale.x,
-    cursor.startY = (canvas.offsetHeight - e.offsetY) * screen.scale.y,
-    canvas.addEventListener('mouseup', handler.Mouseup)
+  },
+  Mousedown: evt => {
+    const e = evt.touches? evt.touches[0] : evt
+    { // set cords
+      if (touch) {
+      cursor.x = (e.clientX - canvas.offsetLeft) * screen.scale.x
+      cursor.y = (canvas.offsetHeight - (e.clientY - canvas.offsetTop)) * screen.scale.y
+      } else {
+      cursor.x = e.offsetX * screen.scale.x
+      cursor.y = (canvas.offsetHeight - e.offsetY) * screen.scale.y  
+      }
+      cursor.x = cursor.startX = Math.round(cursor.x)
+      cursor.y = cursor.startY = Math.round(cursor.y)
+    }
+    { // check if cursor crossing an item
+      cursor.hold = true
+      cursor.target = ''
+      cursor.blockId = null
+      cursor.crossedEl = null
+      if (checkCollision({...star, ...lvls[lvl].star}, cursor)) {
+        cursor.crossedEl = star
+        cursor.target = 'star'
+      } else if (checkCollision(player, cursor)) {
+        cursor.crossedEl = player
+        cursor.target = 'player'
+      } else lvls[lvl].blocks[color].forEach((block, id) => {
+        if (checkCollision(block, cursor)) {
+          cursor.crossedEl = block
+          cursor.target = 'block'
+          cursor.blockId = id
+        }
+      })
+    }
+    checkCursorStyle()
+    { // add handlers
+      if (touch) canvas.addEventListener('touchend', handler.Mouseup)
+      else canvas.addEventListener('mouseup', handler.Mouseup)
+    }
   },
   Keydown: e => {
     const key = {
@@ -1174,6 +1233,7 @@ const handler = {
   },
   MenuTouchStart: e => {
     e.stopPropagation()
+    touch = true
     menu.el.removeEventListener('click', handler.MenuClick)
     if (e.touches[0].target.closest('.menu__btn')) {
       const btnId = +e.target.dataset.id
@@ -1188,7 +1248,25 @@ const handler = {
         stick.wrapper.style.display = 'block'
         stick.enabled = true
       } if (btnId === 1) {
-
+        menu.el.classList.add('hide')
+        profile.camera = 'static'
+        render.mode = 'static'
+        canvas.style.marginTop = 'auto'
+        canvas.style.width = (window.innerHeight - window.innerHeight*0.1)*16/9 + 'px'
+        canvas.style.height = window.innerHeight - window.innerHeight*0.1 + 'px'
+        levelsList.init()
+        let timeout = setTimeout(() => {
+          levelsList.el.classList.remove('hide')
+          clearTimeout(timeout)
+        }, 100)
+        let timeout1 = setTimeout(() => {
+          init()
+          clearTimeout(timeout1)
+        }, 1000)
+        starSvg.style.left = '10000px'
+        starSvg.style.bottom = '10000px'
+        edit = true
+        checkOrientation()
       } if (btnId === 2) {
         menu.el.classList.add('hide')
         settings.el ? settings.el.classList.remove('hide') : settings.init()
