@@ -184,7 +184,7 @@ select {
   cursor: pointer;
   top: 50px;
   right: 50px;
-  width: 30px;
+  width: 6vh;
   z-index: 12;
 }
 #fullscreenSvg path {

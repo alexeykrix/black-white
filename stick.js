@@ -166,6 +166,7 @@ class Stick {
   handlerCancel = e => e.preventDefault()
 
   init = () => {
+    console.log('init')
     this.upadteStyles()
     this.stick.x = this.wrapper.offsetLeft
     this.stick.y = this.wrapper.offsetTop
@@ -173,9 +174,18 @@ class Stick {
     document.addEventListener('touchend', this.handlerEnd)
     document.addEventListener('touchcancel', this.handlerCancel)
   }
+  stop = () =>  {
+    console.log('stop')
+    document.removeEventListener('touchstart', this.handlerStart)
+    document.removeEventListener('touchend', this.handlerEnd)
+    document.removeEventListener('touchcancel', this.handlerCancel)
+    this.wrapper.style.display = 'none'
+    this.x = null
+    this.y = null
+  }
 
   getValues = () => ({
-    strength: Math.round(this.stick.radius)*0.02,
+    strength: 1,
     direction: this.stick.direction,
     pressed: this.stick.pressed,
     ax: this.stick.ax*2/100 || 0,

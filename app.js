@@ -253,6 +253,22 @@ render =  {
     if (lvls[lvl].name) text = lvls[lvl].name 
     c.fillText(text, 0, 45)
     
+    if (edit) {
+      for (var x = 10.5; x < screen.w; x += 10) {
+        c.moveTo(x, 0);
+        c.lineTo(x, screen.w);
+      }
+  
+      for (var y = 10.5; y < screen.w; y += 10) {
+        c.moveTo(0, y);
+        c.lineTo(screen.w, y);
+      }
+  
+      c.strokeStyle = "#888";
+      c.stroke();
+    }
+    
+    
     // for debug \/
     // c.font = "15px Verdana"
     // c.strokeStyle = "red"
@@ -541,14 +557,19 @@ movePlayer = () => {
       document.removeEventListener('keydown', handler.Keydown)
       document.removeEventListener('keyup', handler.Keyup)
       document.addEventListener('keydown', handler.EditorKeydown)
-
+      let btn = document.querySelector('.stop')
+      btn.classList.toggle('play')
+      btn.classList.toggle('stop')
+      
       if (touch) {
         canvas.addEventListener('touchmove', handler.Mousemove)
         canvas.addEventListener('touchstart', handler.Mousedown)
         clearInterval(moveInterval)
         moveInterval = null
         invertSvg.style.display = 'none'
-        stick.wrapper.style.display = 'none'
+        // stick.wrapper.style.display = 'none'
+        stick.stop()
+        stick.enabled = false
       } else {
         canvas.addEventListener('mousemove', handler.Mousemove)
         canvas.addEventListener('mousedown', handler.Mousedown)
@@ -686,6 +707,7 @@ movePlayer = () => {
   
   if (moveDirection && moveDirection === 'up' && !inFall) jump()
 
+  // stick.wrapper.style.display = 'none'
   moveDirection? moveDirections.shift() :''
   if (pressed && moveDirection) moveDirections.push(pressed)
 },
@@ -863,7 +885,9 @@ const handler = {
             clearInterval(moveInterval)
             moveInterval = null
             invertSvg.style.display = 'none'
-            stick.wrapper.style.display = 'none'
+            // stick.wrapper.style.display = 'none'
+            stick.stop()
+            stick.enabled = false
           } else {
             canvas.addEventListener('mousemove', handler.Mousemove)
             canvas.addEventListener('mousedown', handler.Mousedown)
@@ -1103,6 +1127,29 @@ const handler = {
   },
   Mouseup: evt => {
     const e = evt.touches? evt.changedTouches[0] : evt
+    let target = {...cursor}.target
+    let blockId = {...cursor}.blockId
+    let style = {...cursor}.style
+
+    if (target === 'player') {
+      player.x = Math.round(player.x / 10)*10
+      player.y = Math.round(player.y / 10)*10
+    } 
+    else if (target === 'star') {
+      lvls[lvl].star.x = Math.round(lvls[lvl].star.x/10)*10
+      lvls[lvl].star.y = Math.round(lvls[lvl].star.y/10)*10
+    } 
+    else if (cursor.target === 'block') {
+      let block = lvls[lvl].blocks[color][blockId]
+      block.x = Math.round(block.x / 10) * 10
+      block.y = Math.round(block.y / 10) * 10
+    } 
+    if (cursor.style === 'horizontal' 
+    || cursor.style === 'vertical' ) { 
+      let block = lvls[lvl].blocks[color][blockId]
+      block.w = Math.round(block.w / 10) * 10
+      block.h = Math.round(block.h / 10) * 10
+    }
 
     cursor.hold = false
     cursor.target = ''
@@ -1299,6 +1346,16 @@ const handler = {
 // START \/
 menu.init()
 
+document.addEventListener('mousewheel', e => {
+  screen.w += e.deltaY>0 ? screen.w/30 :  -screen.w/30
+  screen.h += e.deltaY>0 ? screen.h/30 :  -screen.h/30
+  
+  canvas.width = screen.w
+  canvas.height = screen.h
+})
+
 
 // TODO: 
-// 7. add new blocks like spikes or third colored blocks or blocks that have movement
+// 1. add zoom in editor 
+// 1.1 blocks moving on the grid
+// 2. add new blocks like spikes or third colored blocks or blocks that have movement
